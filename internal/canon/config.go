@@ -18,7 +18,7 @@ const configFileName = ".canon.jsonc"
 
 // supportedKinds lists every document kind in canonical order. Configuration
 // defaults and validation use this order so output stays deterministic.
-var supportedKinds = []string{KindADR, KindSPEC, KindDomain}
+var supportedKinds = []string{KindADR, KindDomain}
 
 // ConfigError is a structured configuration failure raised while resolving
 // repository policy. Policy-aware commands surface it as a config-category
@@ -152,9 +152,8 @@ var recognizedConfigChildren = map[string]map[string]bool{
 	"conventions":             {"append": true, "required_kinds": true, "validation": true, "lifecycle": true, "tags": true},
 	"conventions.validation":  {"strict": true},
 	"conventions.lifecycle":   {"require_reason": true, "new_documents_must_be_proposed": true},
-	"conventions.tags":        {KindADR: true, KindSPEC: true, KindDomain: true},
+	"conventions.tags":        {KindADR: true, KindDomain: true},
 	"conventions.tags.adr":    {"allowed": true},
-	"conventions.tags.spec":   {"allowed": true},
 	"conventions.tags.domain": {"allowed": true},
 }
 
@@ -276,7 +275,7 @@ func validateRawConfig(path string, raw rawConfig) []Diagnostic {
 	if conv.RequiredKinds != nil {
 		kinds := *conv.RequiredKinds
 		if len(kinds) == 0 {
-			findings = append(findings, invalid("conventions.required_kinds must not be empty", "List at least one of adr, spec, or domain, or remove the key to require all three."))
+			findings = append(findings, invalid("conventions.required_kinds must not be empty", "List at least one of adr or domain, or remove the key to require both."))
 		}
 		seen := map[string]bool{}
 		for _, kind := range kinds {
@@ -514,12 +513,11 @@ type kindDir struct {
 func repoStoreDirs(repo Repo) []kindDir {
 	return []kindDir{
 		{Kind: KindADR, Dir: repo.ADR.Dir},
-		{Kind: KindSPEC, Dir: repo.Spec.Dir},
 		{Kind: KindDomain, Dir: repo.Domain.Dir},
 	}
 }
 
-// resolveRepoPolicy reconciles configuration discovery across all three
+// resolveRepoPolicy reconciles configuration discovery across both
 // store directories for corpus-wide commands. All stores must discover the
 // same file, or all must discover none; mixed or conflicting sources are a
 // config_scope_mismatch because no single repository policy applies.

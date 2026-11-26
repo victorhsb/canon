@@ -119,12 +119,12 @@ type indexLines struct {
 }
 
 // indexCorpusID identifies the configured corpus: the cleaned absolute paths
-// of all three managed store directories joined by newlines. Absent stores
+// of both managed store directories joined by newlines. Absent stores
 // still contribute their path, so the index identity is stable regardless of
 // which kinds are initialized.
 func indexCorpusID(repo Repo) (string, error) {
-	dirs := make([]string, 0, 3)
-	for _, store := range []Store{repo.ADR, repo.Spec, repo.Domain} {
+	dirs := make([]string, 0, 2)
+	for _, store := range []Store{repo.ADR, repo.Domain} {
 		abs, err := filepath.Abs(store.Dir)
 		if err != nil {
 			return "", fmt.Errorf("resolve %s: %w", store.Dir, err)
@@ -171,7 +171,7 @@ func buildSearchIndex(repo Repo) (searchIndex, error) {
 	if err != nil {
 		return searchIndex{}, err
 	}
-	docs, err := listDocuments(repo.ADR, repo.Spec, repo.Domain)
+	docs, err := listDocuments(repo.ADR, repo.Domain)
 	if err != nil {
 		return searchIndex{}, err
 	}
@@ -428,7 +428,7 @@ func indexFreshness(manifest indexManifest, repo Repo) (state, reason string) {
 // file in every present managed store.
 func currentSourcePaths(repo Repo) ([]string, error) {
 	paths := []string{}
-	for _, store := range []Store{repo.ADR, repo.Spec, repo.Domain} {
+	for _, store := range []Store{repo.ADR, repo.Domain} {
 		if !store.Exists() {
 			continue
 		}

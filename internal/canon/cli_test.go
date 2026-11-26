@@ -53,19 +53,13 @@ func TestCommandsExposeAgentMetadata(t *testing.T) {
 	if len(commands) == 0 {
 		t.Fatal("expected commands")
 	}
-	var sawNew, sawSpecNew, sawDomainNew, sawSkillInstall, sawSkillUpdate bool
+	var sawNew, sawDomainNew, sawSkillInstall, sawSkillUpdate bool
 	for _, raw := range commands {
 		command := raw.(map[string]any)
 		if command["name"] == "adr new" {
 			sawNew = true
 			if command["mutating"] != true || command["has_dry_run"] != true {
 				t.Fatalf("adr new command metadata = %#v", command)
-			}
-		}
-		if command["name"] == "spec new" {
-			sawSpecNew = true
-			if command["mutating"] != true || command["has_dry_run"] != true {
-				t.Fatalf("spec new command metadata = %#v", command)
 			}
 		}
 		if command["name"] == "domain new" {
@@ -97,8 +91,8 @@ func TestCommandsExposeAgentMetadata(t *testing.T) {
 			}
 		}
 	}
-	if !sawNew || !sawSpecNew || !sawDomainNew {
-		t.Fatalf("missing new commands: adr=%v spec=%v domain=%v", sawNew, sawSpecNew, sawDomainNew)
+	if !sawNew || !sawDomainNew {
+		t.Fatalf("missing new commands: adr=%v domain=%v", sawNew, sawDomainNew)
 	}
 	if !sawSkillInstall || !sawSkillUpdate {
 		t.Fatalf("missing skill install/update commands: install=%v update=%v", sawSkillInstall, sawSkillUpdate)
@@ -507,7 +501,7 @@ func TestSkillInstallClaudeTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read claude agent: %v", err)
 	}
-	for _, want := range []string{"tools: Read, Grep, Glob, Bash", "model: inherit", "canon-skill-version: 3"} {
+	for _, want := range []string{"tools: Read, Grep, Glob, Bash", "model: inherit", "canon-skill-version: 4"} {
 		if !strings.Contains(string(content), want) {
 			t.Fatalf("claude agent missing %q:\n%s", want, content)
 		}
@@ -589,7 +583,7 @@ func TestSkillInstallRepeatedTargetsAndCodex(t *testing.T) {
 		`name = "canon-critic"`,
 		`sandbox_mode = "read-only"`,
 		`developer_instructions = "You are a canon corpus critic:`,
-		`# canon-skill-version: 3`,
+		`# canon-skill-version: 4`,
 		`# canon-skill-hash: sha256:`,
 		"canon-record-gate",
 	} {
@@ -1039,14 +1033,14 @@ func TestContextFormatRendersAcceptedADRList(t *testing.T) {
 	}
 }
 
-func TestContextFormatSupportsCombinedAndSpecLists(t *testing.T) {
+func TestContextFormatSupportsCombinedAndDomainLists(t *testing.T) {
 	adrDir := filepath.Join(t.TempDir(), "adr")
-	specDir := filepath.Join(t.TempDir(), "spec")
-	if code, _ := runForTest(t, "--adr-dir", adrDir, "--spec-dir", specDir, "adr", "new", "--title", "Use SQLite", "--status", "accepted"); code != exitOK {
+	domainDir := filepath.Join(t.TempDir(), "domain")
+	if code, _ := runForTest(t, "--adr-dir", adrDir, "--domain-dir", domainDir, "adr", "new", "--title", "Use SQLite", "--status", "accepted"); code != exitOK {
 		t.Fatalf("adr new code = %d", code)
 	}
-	if code, _ := runForTest(t, "--adr-dir", adrDir, "--spec-dir", specDir, "spec", "new", "--title", "Query storage", "--status", "accepted"); code != exitOK {
-		t.Fatalf("spec new code = %d", code)
+	if code, _ := runForTest(t, "--adr-dir", adrDir, "--domain-dir", domainDir, "domain", "new", "--title", "Query storage", "--status", "accepted"); code != exitOK {
+		t.Fatalf("domain new code = %d", code)
 	}
 
 	tests := []struct {
@@ -1057,17 +1051,17 @@ func TestContextFormatSupportsCombinedAndSpecLists(t *testing.T) {
 		{
 			name: "combined",
 			args: []string{"list", "--status", "accepted"},
-			want: "## Project Documents\n\n- `ADR-0001`: Use SQLite\n- `SPEC-0001`: Query storage\n",
+			want: "## Project Documents\n\n- `ADR-0001`: Use SQLite\n- `DM-0001`: Query storage\n",
 		},
 		{
-			name: "spec",
-			args: []string{"spec", "list", "--status", "accepted"},
-			want: "## Specifications\n\n- `SPEC-0001`: Query storage\n",
+			name: "domain",
+			args: []string{"domain", "list", "--status", "accepted"},
+			want: "## Domain Model\n\n- `DM-0001`: Query storage\n",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := []string{"--adr-dir", adrDir, "--spec-dir", specDir, "--format", "context"}
+			args := []string{"--adr-dir", adrDir, "--domain-dir", domainDir, "--format", "context"}
 			code, output := runRawForTest(t, append(args, tt.args...)...)
 			if code != exitOK || output != tt.want {
 				t.Fatalf("code = %d\nwant:\n%s\ngot:\n%s", code, tt.want, output)
@@ -1201,183 +1195,43 @@ func runKindTest(t *testing.T, args ...string) (int, map[string]any) {
 	return code, env
 }
 
-func TestNewSpecDryRunDoesNotWriteFile(t *testing.T) {
-	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
-	code, env := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "spec", "new", "--title", "Local query index", "--dry-run")
-	if code != exitOK {
-		t.Fatalf("code = %d", code)
-	}
-	if env["status"] != "planned" {
-		t.Fatalf("status = %v", env["status"])
-	}
-	if _, err := os.Stat(spec); !os.IsNotExist(err) {
-		t.Fatalf("dry-run created spec directory: %v", err)
-	}
-	data := env["data"].(map[string]any)
-	created := data["adr"].(map[string]any)
-	if created["kind"] != "spec" || created["id"] != "SPEC-0001" {
-		t.Fatalf("spec preview = %#v", created)
-	}
-}
-
-func TestCreateListSearchAndShowSpec(t *testing.T) {
-	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
-	code, env := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "spec", "new", "--title", "Local query index", "--tags", "storage, query", "--context", "Agents need local lookup.", "--requirements", "Return ADRs by tag.", "--constraints", "No external deps.", "--acceptance", "list --tag storage works.")
-	if code != exitOK {
-		t.Fatalf("new spec code = %d", code)
-	}
-	created := env["data"].(map[string]any)["adr"].(map[string]any)
-	if created["id"] != "SPEC-0001" || created["kind"] != "spec" {
-		t.Fatalf("created spec = %#v", created)
-	}
-
-	code, env = runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "spec", "list", "--tag", "storage")
-	if code != exitOK {
-		t.Fatalf("list code = %d", code)
-	}
-	if env["data"].(map[string]any)["count"] != float64(1) {
-		t.Fatalf("list data = %#v", env["data"])
-	}
-
-	code, env = runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "search", "--query", "requirements")
-	if code != exitOK {
-		t.Fatalf("search code = %d", code)
-	}
-	if env["data"].(map[string]any)["count"] != float64(1) {
-		t.Fatalf("search data = %#v", env["data"])
-	}
-
-	code, env = runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "show", "--id", "SPEC-0001")
-	if code != exitOK {
-		t.Fatalf("show code = %d", code)
-	}
-	shown := env["data"].(map[string]any)["adr"].(map[string]any)
-	if shown["kind"] != "spec" || shown["content"] == "" {
-		t.Fatalf("show spec = %#v", shown)
-	}
-	content := shown["content"].(string)
-	for _, section := range []string{"## Requirements", "## Constraints", "## Acceptance Criteria"} {
-		if !strings.Contains(content, section) {
-			t.Fatalf("spec content missing %s:\n%s", section, content)
-		}
-	}
-}
-
-func TestADRAndSPECNumberIndependently(t *testing.T) {
-	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
-	if code, _ := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "adr", "new", "--title", "First ADR"); code != exitOK {
-		t.Fatalf("adr new code = %d", code)
-	}
-	if code, _ := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "spec", "new", "--title", "First SPEC"); code != exitOK {
-		t.Fatalf("spec new code = %d", code)
-	}
-	if code, _ := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "adr", "new", "--title", "Second ADR"); code != exitOK {
-		t.Fatalf("second adr code = %d", code)
-	}
-	code, env := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "list")
-	if code != exitOK {
-		t.Fatalf("list code = %d", code)
-	}
-	data := env["data"].(map[string]any)
-	if data["count"] != float64(3) {
-		t.Fatalf("count = %v", data["count"])
-	}
-	adrs := data["adrs"].([]any)
-	ids := []string{}
-	for _, raw := range adrs {
-		ids = append(ids, raw.(map[string]any)["id"].(string))
-	}
-	if ids[0] != "ADR-0001" || ids[1] != "ADR-0002" || ids[2] != "SPEC-0001" {
-		t.Fatalf("ordered ids = %v", ids)
-	}
-}
-
-func TestSupersedeRejectsCrossKindReplacement(t *testing.T) {
-	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
-	if code, _ := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "adr", "new", "--title", "Old ADR"); code != exitOK {
-		t.Fatalf("adr new code = %d", code)
-	}
-	if code, _ := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "spec", "new", "--title", "Replacement SPEC"); code != exitOK {
-		t.Fatalf("spec new code = %d", code)
-	}
-	code, env := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "supersede", "--id", "ADR-0001", "--by", "SPEC-0001", "--dry-run")
-	if code != exitState {
-		t.Fatalf("cross-kind supersede code = %d env = %#v", code, env)
-	}
-	errData := env["error"].(map[string]any)
-	if errData["code"] != "cross_kind_supersede" {
-		t.Fatalf("error = %#v", errData)
-	}
-}
-
-func TestAcceptMutatesSpec(t *testing.T) {
-	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
-	if code, _ := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "spec", "new", "--title", "Candidate spec"); code != exitOK {
-		t.Fatalf("spec new code = %d", code)
-	}
-	if code, env := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "accept", "--id", "SPEC-0001", "--reason", "Approved.", "--dry-run"); code != exitOK || env["status"] != "planned" {
-		t.Fatalf("accept dry-run code=%d env=%#v", code, env)
-	}
-	if code, _ := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "accept", "--id", "SPEC-0001", "--reason", "Approved."); code != exitOK {
-		t.Fatalf("accept code = %d", code)
-	}
-	code, env := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, "show", "--id", "SPEC-0001")
-	if code != exitOK {
-		t.Fatalf("show code = %d", code)
-	}
-	shown := env["data"].(map[string]any)["adr"].(map[string]any)
-	if shown["status"] != "accepted" {
-		t.Fatalf("status = %v", shown["status"])
-	}
-	content := shown["content"].(string)
-	if !strings.Contains(content, "## History: Accepted") || !strings.Contains(content, "Approved.") {
-		t.Fatalf("spec content missing accepted history:\n%s", content)
-	}
-}
-
-func TestDoctorReportsMissingSpecDirectory(t *testing.T) {
-	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
-	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
-	if code, _ := runKindTest(t, append(dirs, "adr", "init")...); code != exitOK {
-		t.Fatalf("init code = %d", code)
-	}
-	code, env := runKindTest(t, append(dirs, "doctor")...)
-	if code != exitOK {
-		t.Fatalf("doctor code = %d", code)
-	}
-	if env["status"] != "warning" {
-		t.Fatalf("doctor status = %v", env["status"])
-	}
-	var sawSpecWarning bool
-	for _, raw := range env["data"].(map[string]any)["diagnostics"].([]any) {
-		d := raw.(map[string]any)
-		if d["name"] == "spec_directory" && d["status"] == "warning" {
-			sawSpecWarning = true
-		}
-	}
-	if !sawSpecWarning {
-		t.Fatalf("doctor missing spec_directory warning: %#v", env["data"])
-	}
-}
-
 func TestNewAndInitRequireKindPrefix(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	for _, command := range []string{"new", "init"} {
-		code, env := runKindTest(t, "--adr-dir", adr, "--spec-dir", spec, command)
+		code, env := runKindTest(t, "--adr-dir", adr, command)
 		if code != exitUsage {
 			t.Fatalf("%s code = %d env = %#v", command, code, env)
 		}
 		if env["error"].(map[string]any)["code"] != "kind_prefix_required" {
 			t.Fatalf("%s error = %#v", command, env["error"])
 		}
+	}
+}
+
+func TestLegacySPECStoreIsIgnoredAndPreserved(t *testing.T) {
+	t.Chdir(t.TempDir())
+	path := writeRawDocForTest(t, "docs/spec", "0001-legacy.md", "SPEC-0001", "proposed", "")
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{
+		{"spec", "new", "--title", "Another"},
+		{"--spec-dir", "docs/spec", "list"},
+		{"show", "--id", "SPEC-0001"},
+		{"accept", "--id", "SPEC-0001"},
+	} {
+		if code, output := runRawForTest(t, args...); code != exitUsage {
+			t.Fatalf("%v returned %d: %s", args, code, output)
+		}
+	}
+	code, env := runForTest(t, "list")
+	if code != exitOK || env["data"].(map[string]any)["count"] != float64(0) {
+		t.Fatalf("list returned %d: %v", code, env)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatalf("legacy record changed or missing: %v", err)
 	}
 }
 
@@ -1461,19 +1315,15 @@ func TestCreateListSearchAndShowDomain(t *testing.T) {
 	}
 }
 
-func TestThreeKindsNumberIndependently(t *testing.T) {
+func TestKindsNumberIndependently(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	if code, _ := runKindTest(t, append(dirs, "adr", "new", "--title", "First ADR")...); code != exitOK {
 		t.Fatalf("adr new code = %d", code)
 	}
 	if code, _ := runKindTest(t, append(dirs, "domain", "new", "--title", "First entry")...); code != exitOK {
 		t.Fatalf("domain new code = %d", code)
-	}
-	if code, _ := runKindTest(t, append(dirs, "spec", "new", "--title", "First SPEC")...); code != exitOK {
-		t.Fatalf("spec new code = %d", code)
 	}
 	if code, _ := runKindTest(t, append(dirs, "adr", "new", "--title", "Second ADR")...); code != exitOK {
 		t.Fatalf("second adr code = %d", code)
@@ -1483,7 +1333,7 @@ func TestThreeKindsNumberIndependently(t *testing.T) {
 		t.Fatalf("list code = %d", code)
 	}
 	data := env["data"].(map[string]any)
-	if data["count"] != float64(4) {
+	if data["count"] != float64(3) {
 		t.Fatalf("count = %v", data["count"])
 	}
 	adrs := data["adrs"].([]any)
@@ -1491,7 +1341,7 @@ func TestThreeKindsNumberIndependently(t *testing.T) {
 	for _, raw := range adrs {
 		ids = append(ids, raw.(map[string]any)["id"].(string))
 	}
-	want := []string{"ADR-0001", "ADR-0002", "DM-0001", "SPEC-0001"}
+	want := []string{"ADR-0001", "ADR-0002", "DM-0001"}
 	if strings.Join(ids, ",") != strings.Join(want, ",") {
 		t.Fatalf("ordered ids = %v, want %v", ids, want)
 	}
@@ -1552,14 +1402,10 @@ func doctorDiagnostics(env map[string]any) []map[string]any {
 
 func TestDoctorReportsMissingDomainDirectory(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	if code, _ := runKindTest(t, append(dirs, "adr", "init")...); code != exitOK {
 		t.Fatalf("adr init code = %d", code)
-	}
-	if code, _ := runKindTest(t, append(dirs, "spec", "init")...); code != exitOK {
-		t.Fatalf("spec init code = %d", code)
 	}
 	code, env := runKindTest(t, append(dirs, "doctor")...)
 	if code != exitOK {
@@ -1581,7 +1427,7 @@ func TestDoctorReportsMissingDomainDirectory(t *testing.T) {
 
 func TestDoctorFlagsDuplicateAcceptedDomainTitles(t *testing.T) {
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", filepath.Join(t.TempDir(), "adr"), "--spec-dir", filepath.Join(t.TempDir(), "spec"), "--domain-dir", domain}
+	dirs := []string{"--adr-dir", filepath.Join(t.TempDir(), "adr"), "--domain-dir", domain}
 	if code, _ := runKindTest(t, append(dirs, "domain", "new", "--title", "Order", "--status", "accepted")...); code != exitOK {
 		t.Fatalf("first new code = %d", code)
 	}
@@ -1625,7 +1471,7 @@ func TestDoctorFlagsDuplicateAcceptedDomainTitles(t *testing.T) {
 
 func TestDoctorFlagsDeadDomainReferences(t *testing.T) {
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", filepath.Join(t.TempDir(), "adr"), "--spec-dir", filepath.Join(t.TempDir(), "spec"), "--domain-dir", domain}
+	dirs := []string{"--adr-dir", filepath.Join(t.TempDir(), "adr"), "--domain-dir", domain}
 	if code, _ := runKindTest(t, append(dirs, "domain", "new", "--title", "Session")...); code != exitOK {
 		t.Fatalf("first new code = %d", code)
 	}
@@ -1722,14 +1568,10 @@ func findingNames(findings []map[string]any) []string {
 
 func TestValidateHealthyCorpus(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	if code, _ := runKindTest(t, append(dirs, "adr", "new", "--title", "One")...); code != exitOK {
 		t.Fatalf("adr new code = %d", code)
-	}
-	if code, _ := runKindTest(t, append(dirs, "spec", "new", "--title", "Two")...); code != exitOK {
-		t.Fatalf("spec new code = %d", code)
 	}
 	if code, _ := runKindTest(t, append(dirs, "domain", "new", "--title", "Three")...); code != exitOK {
 		t.Fatalf("domain new code = %d", code)
@@ -1742,7 +1584,7 @@ func TestValidateHealthyCorpus(t *testing.T) {
 		t.Fatalf("validate status = %v", env["status"])
 	}
 	summary := env["data"].(map[string]any)["summary"].(map[string]any)
-	if summary["files_checked"] != float64(3) || summary["errors"] != float64(0) || summary["warnings"] != float64(0) {
+	if summary["files_checked"] != float64(2) || summary["errors"] != float64(0) || summary["warnings"] != float64(0) {
 		t.Fatalf("summary = %#v", summary)
 	}
 	if len(validateFindings(env)) != 0 {
@@ -1752,9 +1594,8 @@ func TestValidateHealthyCorpus(t *testing.T) {
 
 func TestValidateDuplicateID(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	first := writeRawDocForTest(t, adr, "0001-one.md", "ADR-0001", "accepted", "")
 	second := writeRawDocForTest(t, adr, "0001-copy.md", "ADR-0001", "accepted", "")
 	code, env := runKindTest(t, append(dirs, "validate")...)
@@ -1784,9 +1625,8 @@ func TestValidateDuplicateID(t *testing.T) {
 
 func TestValidateBrokenReference(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	writeRawDocForTest(t, adr, "0001-one.md", "ADR-0001", "superseded", "superseded_by: ADR-0009\n")
 	code, env := runKindTest(t, append(dirs, "validate")...)
 	if code != exitState {
@@ -1809,15 +1649,11 @@ func TestValidateBrokenReference(t *testing.T) {
 	}
 }
 
-func TestValidateMissingSpecDirectoryWarning(t *testing.T) {
+func TestValidateMissingDomainDirectoryWarning(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	writeRawDocForTest(t, adr, "0001-one.md", "ADR-0001", "accepted", "")
-	if err := os.MkdirAll(domain, 0o755); err != nil {
-		t.Fatalf("mkdir domain: %v", err)
-	}
 	code, env := runKindTest(t, append(dirs, "validate")...)
 	if code != exitOK {
 		t.Fatalf("validate code = %d", code)
@@ -1840,9 +1676,8 @@ func TestValidateMissingSpecDirectoryWarning(t *testing.T) {
 
 func TestValidateByIDScopesToOneDocument(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	writeRawDocForTest(t, adr, "0001-clean.md", "ADR-0001", "accepted", "")
 	writeRawDocForTest(t, adr, "0002-broken.md", "ADR-0002", "superseded", "superseded_by: ADR-0009\n")
 
@@ -1883,11 +1718,10 @@ func TestValidateByIDScopesToOneDocument(t *testing.T) {
 
 func TestValidateKindScoped(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	writeRawDocForTest(t, adr, "0001-broken.md", "ADR-0001", "superseded", "superseded_by: ADR-0009\n")
-	writeRawDocForTest(t, spec, "0001-fine.md", "SPEC-0001", "accepted", "")
+	writeRawDocForTest(t, domain, "0001-fine.md", "DM-0001", "accepted", "")
 
 	code, env := runKindTest(t, append(dirs, "adr", "validate")...)
 	if code != exitState {
@@ -1898,20 +1732,19 @@ func TestValidateKindScoped(t *testing.T) {
 		t.Fatalf("adr validate findings = %v", names)
 	}
 
-	code, env = runKindTest(t, append(dirs, "spec", "validate")...)
+	code, env = runKindTest(t, append(dirs, "domain", "validate")...)
 	if code != exitOK {
-		t.Fatalf("spec validate code = %d", code)
+		t.Fatalf("domain validate code = %d", code)
 	}
 	if env["status"] != "ok" {
-		t.Fatalf("spec validate status = %v findings = %#v", env["status"], env["data"])
+		t.Fatalf("domain validate status = %v findings = %#v", env["status"], env["data"])
 	}
 }
 
 func TestValidateDomainScoped(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	writeRawDocForTest(t, domain, "0001-fine.md", "DM-0001", "accepted", "")
 	code, env := runKindTest(t, append(dirs, "domain", "validate")...)
 	if code != exitOK {
@@ -1928,9 +1761,8 @@ func TestValidateDomainScoped(t *testing.T) {
 
 func TestValidateMalformedFileDoesNotMaskCorpus(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	writeRawDocForTest(t, adr, "0001-one.md", "ADR-0001", "superseded", "")
 	badPath := filepath.Join(adr, "0002-bad.md")
 	if err := os.WriteFile(badPath, []byte("no front matter here\n"), 0o644); err != nil {
@@ -1965,9 +1797,8 @@ func TestValidateMalformedFileDoesNotMaskCorpus(t *testing.T) {
 
 func TestValidateReciprocityViolation(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	writeRawDocForTest(t, adr, "0001-old.md", "ADR-0001", "superseded", "superseded_by: ADR-0002\n")
 	writeRawDocForTest(t, adr, "0002-new.md", "ADR-0002", "accepted", "")
 	code, env := runKindTest(t, append(dirs, "validate")...)
@@ -1982,11 +1813,10 @@ func TestValidateReciprocityViolation(t *testing.T) {
 
 func TestValidateKindAndDirectoryCoherence(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
-	// SPEC-prefixed id living in the ADR directory.
-	writeRawDocForTest(t, adr, "0001-misplaced.md", "SPEC-0001", "accepted", "")
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
+	// DM-prefixed id living in the ADR directory.
+	writeRawDocForTest(t, adr, "0001-misplaced.md", "DM-0001", "accepted", "")
 	code, env := runKindTest(t, append(dirs, "validate")...)
 	if code != exitState {
 		t.Fatalf("validate code = %d", code)
@@ -1999,9 +1829,8 @@ func TestValidateKindAndDirectoryCoherence(t *testing.T) {
 
 func TestValidateInvalidStatusAndMalformedDate(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	path := writeRawDocForTest(t, adr, "0001-one.md", "ADR-0001", "accepted", "")
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -2033,9 +1862,8 @@ func TestValidateInvalidStatusAndMalformedDate(t *testing.T) {
 
 func TestValidateNeverMutatesAndDeterministicOrder(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	dirs := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain}
+	dirs := []string{"--adr-dir", adr, "--domain-dir", domain}
 	writeRawDocForTest(t, adr, "0002-b.md", "ADR-0002", "superseded", "superseded_by: ADR-0009\n")
 	writeRawDocForTest(t, adr, "0001-a.md", "ADR-0001", "superseded", "")
 
@@ -2093,10 +1921,8 @@ func TestRoutingErrorContracts(t *testing.T) {
 	}
 	tests := []routingError{
 		{name: "bare adr", args: []string{"adr"}, command: "adr", code: "missing_kind_subcommand", message: `"adr" requires a subcommand`, fix: kindMissingFix("adr")},
-		{name: "bare spec", args: []string{"spec"}, command: "spec", code: "missing_kind_subcommand", message: `"spec" requires a subcommand`, fix: kindMissingFix("spec")},
 		{name: "bare domain", args: []string{"domain"}, command: "domain", code: "missing_kind_subcommand", message: `"domain" requires a subcommand`, fix: kindMissingFix("domain")},
 		{name: "unknown adr child", args: []string{"adr", "show"}, command: "adr", code: "unknown_command", message: `unknown adr subcommand "show"`, fix: kindMissingFix("adr") + " Other commands route by --id without a kind prefix."},
-		{name: "unknown spec child", args: []string{"spec", "show"}, command: "spec", code: "unknown_command", message: `unknown spec subcommand "show"`, fix: kindMissingFix("spec") + " Other commands route by --id without a kind prefix."},
 		{name: "unknown domain child", args: []string{"domain", "append"}, command: "domain", code: "unknown_command", message: `unknown domain subcommand "append"`, fix: kindMissingFix("domain") + " Other commands route by --id without a kind prefix."},
 		{name: "bare config", args: []string{"config"}, command: "config", code: "missing_config_subcommand", message: `"config" requires a subcommand`, fix: "Use `canon config show` or `canon config validate`."},
 		{name: "unknown config child", args: []string{"config", "plist"}, command: "config", code: "unknown_command", message: `unknown config subcommand "plist"`, fix: "Use `canon config show` or `canon config validate`."},
@@ -2104,8 +1930,8 @@ func TestRoutingErrorContracts(t *testing.T) {
 		{name: "unknown index child", args: []string{"index", "drop"}, command: "index", code: "unknown_command", message: `unknown index subcommand "drop"`, fix: "Use `canon index status` or `canon index rebuild --dry-run`."},
 		{name: "unknown skill child", args: []string{"skill", "uninstall"}, command: "skill", code: "unknown_skill_subcommand", message: `unknown skill subcommand "uninstall"`, fix: "Use `canon skill`, `canon skill install`, or `canon skill update`."},
 		{name: "unknown top-level", args: []string{"frob"}, command: "frob", code: "unknown_command", message: `unknown command "frob"`, fix: "Run `canon commands` to inspect valid commands."},
-		{name: "bare new", args: []string{"new"}, command: "new", code: "kind_prefix_required", message: `"new" requires a kind prefix`, fix: "Use `canon adr new`, `canon spec new`, or `canon domain new`."},
-		{name: "bare init", args: []string{"init"}, command: "init", code: "kind_prefix_required", message: `"init" requires a kind prefix`, fix: "Use `canon adr init`, `canon spec init`, or `canon domain init`."},
+		{name: "bare new", args: []string{"new"}, command: "new", code: "kind_prefix_required", message: `"new" requires a kind prefix`, fix: "Use `canon adr new` or `canon domain new`."},
+		{name: "bare init", args: []string{"init"}, command: "init", code: "kind_prefix_required", message: `"init" requires a kind prefix`, fix: "Use `canon adr init` or `canon domain init`."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2190,13 +2016,11 @@ func TestInvalidFormatRejected(t *testing.T) {
 // through successfully and every other command is rejected before dispatch.
 func TestContextFormatRouting(t *testing.T) {
 	adr := filepath.Join(t.TempDir(), "adr")
-	spec := filepath.Join(t.TempDir(), "spec")
 	domain := filepath.Join(t.TempDir(), "domain")
-	base := []string{"--adr-dir", adr, "--spec-dir", spec, "--domain-dir", domain, "--format", "context"}
+	base := []string{"--adr-dir", adr, "--domain-dir", domain, "--format", "context"}
 	supported := [][]string{
 		{"list"},
 		{"adr", "list"},
-		{"spec", "list"},
 		{"domain", "list"},
 	}
 	for _, args := range supported {
@@ -2238,13 +2062,13 @@ func TestContextFormatRouting(t *testing.T) {
 // tests that use it.
 var registeredCommandNames = []string{
 	"commands", "version", "doctor",
-	"validate", "adr validate", "spec validate", "domain validate",
+	"validate", "adr validate", "domain validate",
 	"config show", "config validate",
-	"adr init", "spec init", "domain init",
-	"adr new", "spec new", "domain new",
-	"list", "adr list", "spec list", "domain list",
+	"adr init", "domain init",
+	"adr new", "domain new",
+	"list", "adr list", "domain list",
 	"show",
-	"search", "adr search", "spec search", "domain search",
+	"search", "adr search", "domain search",
 	"index status", "index rebuild",
 	"accept", "reject", "supersede", "deprecate", "append",
 	"skill", "skill install", "skill update",
@@ -2335,7 +2159,6 @@ func TestCommandTableOrder(t *testing.T) {
 func TestRegisteredCommandsDispatchThroughTable(t *testing.T) {
 	base := []string{
 		"--adr-dir", filepath.Join(t.TempDir(), "adr"),
-		"--spec-dir", filepath.Join(t.TempDir(), "spec"),
 		"--domain-dir", filepath.Join(t.TempDir(), "domain"),
 	}
 	bareCommands := map[string]bool{

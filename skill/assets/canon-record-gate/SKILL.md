@@ -1,6 +1,6 @@
 ---
 name: canon-record-gate
-description: Classify candidate knowledge as an ADR, SPEC, Domain Entry, or None, and validate whether a proposed record uses the right kind. Use whenever deciding whether something should be recorded as an architecture decision, behavioral specification, or canonical domain concept; reviewing a proposed record's kind; or separating mixed decisions, requirements, and terminology. This skill judges kind fit and record readiness only, not document format, lifecycle, CLI usage, duplication, or retention.
+description: Classify candidate knowledge as an ADR, Domain Entry, or None, and validate whether a proposed record uses the right kind. Use whenever deciding whether something should be recorded as an architecture decision or canonical domain concept; reviewing a proposed record's kind; or separating mixed decisions, requirements, and terminology. This skill judges kind fit and record readiness only, not document format, lifecycle, CLI usage, duplication, or retention.
 ---
 
 # Canon Record Gate
@@ -50,20 +50,6 @@ Record an ADR only when all four tests pass:
 Product or operational drivers may explain an architecture decision, but they
 do not become architecture decisions without a system-shaping commitment.
 
-### SPEC
-
-Record a SPEC only when all three tests pass:
-
-1. **Commitment:** it records agreed requirements, not a request, desire, or
-   exploratory story.
-2. **Behavioral:** it defines observable behavior for one capability and has
-   testable acceptance criteria.
-3. **Narrow:** it specifies one capability.
-
-A SPEC says what must be observable. Reasoning behind a system-shaping choice
-belongs to an ADR; implementation work that does not change agreed behavior is
-not a new SPEC.
-
 ### Domain Entry
 
 Record a Domain Entry only when all five tests pass:
@@ -99,7 +85,7 @@ Use these outcomes:
 
 Use `Multiple` and `Split` only when at least two concerns independently fit or
 likely fit record kinds. An unresolved local implementation detail is not a
-second record merely because it appears beside a valid SPEC or Domain Entry.
+second record merely because it appears beside a valid ADR or Domain Entry.
 Exclude that detail from the recordable concern instead of letting it make the
 valid concern not ready; explain the tighter scope in the rationale.
 When substantive gates such as architectural impact, relevance, or
@@ -116,8 +102,8 @@ Keep the result compact:
 
 ```text
 MODE: <classification | selected-kind validation>
-REQUESTED KIND: <ADR | SPEC | Domain Entry | not supplied>
-KIND: <ADR | SPEC | Domain Entry | None | Multiple | Undetermined>
+REQUESTED KIND: <ADR | Domain Entry | not supplied>
+KIND: <ADR | Domain Entry | None | Multiple | Undetermined>
 READINESS: <ready | not ready | insufficient evidence>
 GATES: <one concise pass/fail/unknown line per applicable gate>
 RATIONALE: <why this kind and readiness follow from the evidence>

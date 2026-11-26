@@ -14,11 +14,10 @@ func benchCorpus(b *testing.B, docsPerKind int) Repo {
 	root := b.TempDir()
 	repo := Repo{
 		ADR:    NewStore(filepath.Join(root, "adr"), KindADR),
-		Spec:   NewStore(filepath.Join(root, "spec"), KindSPEC),
 		Domain: NewStore(filepath.Join(root, "domain"), KindDomain),
 	}
 	body := strings.Repeat("Architecture context and consequences for the decision corpus benchmark. ", 60)
-	for _, store := range []Store{repo.ADR, repo.Spec, repo.Domain} {
+	for _, store := range []Store{repo.ADR, repo.Domain} {
 		for i := 1; i <= docsPerKind; i++ {
 			if _, err := store.WriteNew(fmt.Sprintf("Decision %s %04d", store.Kind, i), "accepted", []string{"bench"}, map[string]string{"context": body}); err != nil {
 				b.Fatalf("seed %s %d: %v", store.Kind, i, err)
@@ -36,7 +35,7 @@ func benchMarkdownSearch(b *testing.B, perKind int) {
 		if err != nil {
 			b.Fatalf("load: %v", err)
 		}
-		_ = searchResults(filterADRs(docs, "", "", "spec 0100"), "spec 0100")
+		_ = searchResults(filterADRs(docs, "", "", "domain 0100"), "domain 0100")
 	}
 }
 
@@ -62,11 +61,11 @@ func benchIndexedSearch(b *testing.B, perKind int) {
 		if state, reason := indexFreshness(lines.manifest, repo); state != indexStateFresh {
 			b.Fatalf("freshness = %q (%s)", state, reason)
 		}
-		docs, warning := searchIndexDocuments(lines, "", "", "", "spec 0100")
+		docs, warning := searchIndexDocuments(lines, "", "", "", "domain 0100")
 		if warning != "" {
 			b.Fatalf("warning = %s", warning)
 		}
-		_ = searchResults(docs, "spec 0100")
+		_ = searchResults(docs, "domain 0100")
 	}
 }
 

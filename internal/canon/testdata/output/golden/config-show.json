@@ -5,8 +5,7 @@
   "data": {
     "discovery_paths": {
       "adr": "t-adr",
-      "domain": "t-domain",
-      "spec": "t-spec"
+      "domain": "t-domain"
     },
     "effective": {
       "conventions": {
@@ -17,7 +16,6 @@
         },
         "required_kinds": [
           "adr",
-          "spec",
           "domain"
         ],
         "tags": {},

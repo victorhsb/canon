@@ -217,7 +217,7 @@ func scopeMismatchMessage(discovery repoConfigDiscovery) string {
 	return fmt.Sprintf("stores resolve to different configuration files: %s", strings.Join(displayed, ", "))
 }
 
-const scopeMismatchFix = "Point --adr-dir, --spec-dir, and --domain-dir at one corpus, or place .canon.jsonc at the shared root so all stores discover the same file."
+const scopeMismatchFix = "Point --adr-dir and --domain-dir at one corpus, or place .canon.jsonc at the shared root so all stores discover the same file."
 
 // runConfigValidate validates the effective repository configuration against
 // the schema. Error findings exit 4; unknown keys are warnings and never

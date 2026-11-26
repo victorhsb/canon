@@ -27,7 +27,7 @@
     },
     {
       "command": "canon search --query text",
-      "description": "Search ADR, SPEC, and domain entry content when the list is too broad.",
+      "description": "Search ADR and domain entry content when the list is too broad.",
       "safety": "read-only"
     }
   ]

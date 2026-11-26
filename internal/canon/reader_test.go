@@ -156,13 +156,12 @@ func TestListDocumentsDeterministicCrossReaderOrder(t *testing.T) {
 	b := fakeReader{docs: []Document{
 		{Kind: KindDomain, ID: "DM-0001", Number: 1, Title: "One"},
 		{Kind: KindADR, ID: "ADR-0001", Number: 1, Title: "A"},
-		{Kind: KindSPEC, ID: "SPEC-0001", Number: 1, Title: "S"},
 	}}
 	docs, err := listDocuments(a, b)
 	if err != nil {
 		t.Fatalf("listDocuments: %v", err)
 	}
-	want := []string{"ADR-0001", "ADR-0002", "DM-0001", "DM-0002", "SPEC-0001"}
+	want := []string{"ADR-0001", "ADR-0002", "DM-0001", "DM-0002"}
 	if len(docs) != len(want) {
 		t.Fatalf("got %d docs, want %d", len(docs), len(want))
 	}

@@ -97,7 +97,7 @@ func commandTable() []commandEntry {
 		{
 			info: CommandInfo{
 				Name:      "doctor",
-				Purpose:   "Check whether required ADR, SPEC, and domain storage is present and parseable, and flag domain-model integrity problems (duplicate accepted titles, references to superseded or deprecated entries). Required kinds come from repository configuration; absent optional stores are healthy.",
+				Purpose:   "Check whether required ADR and domain storage is present and parseable, and flag domain-model integrity problems (duplicate accepted titles, references to superseded or deprecated entries). Required kinds come from repository configuration; absent optional stores are healthy.",
 				Safety:    "read-only",
 				Examples:  []string{"canon doctor"},
 				Mutating:  false,
@@ -130,19 +130,6 @@ func commandTable() []commandEntry {
 				HasDryRun:   false,
 			},
 			handler: kindAdapter(runValidate, KindADR),
-		},
-		{
-			info: CommandInfo{
-				Name:        "spec validate",
-				Purpose:     "Run the corpus integrity checks scoped to the SPEC directory.",
-				Safety:      "read-only",
-				Selectors:   []string{"--strict"},
-				Examples:    []string{"canon spec validate"},
-				NextCommand: []string{"canon validate"},
-				Mutating:    false,
-				HasDryRun:   false,
-			},
-			handler: kindAdapter(runValidate, KindSPEC),
 		},
 		{
 			info: CommandInfo{
@@ -198,17 +185,6 @@ func commandTable() []commandEntry {
 		},
 		{
 			info: CommandInfo{
-				Name:      "spec init",
-				Purpose:   "Create the SPEC directory if it does not exist.",
-				Safety:    "write: creates directory only",
-				Examples:  []string{"canon spec init --dry-run", "canon spec init"},
-				Mutating:  true,
-				HasDryRun: true,
-			},
-			handler: kindAdapter(runInit, KindSPEC),
-		},
-		{
-			info: CommandInfo{
 				Name:      "domain init",
 				Purpose:   "Create the domain entry directory if it does not exist.",
 				Safety:    "write: creates directory only",
@@ -233,19 +209,6 @@ func commandTable() []commandEntry {
 		},
 		{
 			info: CommandInfo{
-				Name:        "spec new",
-				Purpose:     "Create a new SPEC markdown file with parseable metadata. SPECs capture functional requirements.",
-				Safety:      "write: creates one markdown file",
-				Selectors:   []string{"--title", "--status", "--tags"},
-				Examples:    []string{`canon spec new --title "Local query index" --requirements "Return ADRs by tag." --acceptance "list --tag storage works." --dry-run`},
-				NextCommand: []string{"canon spec list", "canon show --id SPEC-0001"},
-				Mutating:    true,
-				HasDryRun:   true,
-			},
-			handler: kindAdapter(runNew, KindSPEC),
-		},
-		{
-			info: CommandInfo{
 				Name:        "domain new",
 				Purpose:     "Create a new domain entry markdown file with parseable metadata. Domain entries define one canonical concept each: its definition, avoided terms with reasons, and relationships.",
 				Safety:      "write: creates one markdown file",
@@ -260,11 +223,11 @@ func commandTable() []commandEntry {
 		{
 			info: CommandInfo{
 				Name:        "list",
-				Purpose:     "List ADR, SPEC, and domain entry summaries together in deterministic order.",
+				Purpose:     "List ADR and domain entry summaries together in deterministic order.",
 				Safety:      "read-only",
 				Selectors:   []string{"--status", "--tag"},
 				Examples:    []string{"canon list", "canon list --status accepted", "canon --format context list --status accepted"},
-				NextCommand: []string{"canon show --id ADR-0001", "canon show --id SPEC-0001", "canon show --id DM-0001", "canon search --query text"},
+				NextCommand: []string{"canon show --id ADR-0001", "canon show --id DM-0001", "canon search --query text"},
 				Mutating:    false,
 				HasDryRun:   false,
 			},
@@ -285,19 +248,6 @@ func commandTable() []commandEntry {
 		},
 		{
 			info: CommandInfo{
-				Name:        "spec list",
-				Purpose:     "List SPEC summaries in deterministic order.",
-				Safety:      "read-only",
-				Selectors:   []string{"--status", "--tag"},
-				Examples:    []string{"canon spec list", "canon spec list --tag storage", "canon --format context spec list --status accepted"},
-				NextCommand: []string{"canon show --id SPEC-0001", "canon spec search --query text"},
-				Mutating:    false,
-				HasDryRun:   false,
-			},
-			handler: kindAdapter(runList, KindSPEC),
-		},
-		{
-			info: CommandInfo{
 				Name:        "domain list",
 				Purpose:     "List domain entry summaries in deterministic order.",
 				Safety:      "read-only",
@@ -312,11 +262,11 @@ func commandTable() []commandEntry {
 		{
 			info: CommandInfo{
 				Name:        "show",
-				Purpose:     "Return one ADR, SPEC, or domain entry with metadata and content.",
+				Purpose:     "Return one ADR or domain entry with metadata and content.",
 				Safety:      "read-only",
 				Selectors:   []string{"--id"},
-				Examples:    []string{"canon show --id ADR-0001", "canon show --id SPEC-0001", "canon show --id DM-0001"},
-				NextCommand: []string{"canon append --id ADR-0001 --title Note --body ...", "canon append --id SPEC-0001 --title Note --body ..."},
+				Examples:    []string{"canon show --id ADR-0001", "canon show --id DM-0001"},
+				NextCommand: []string{"canon append --id ADR-0001 --title Note --body ..."},
 				Mutating:    false,
 				HasDryRun:   false,
 			},
@@ -325,11 +275,11 @@ func commandTable() []commandEntry {
 		{
 			info: CommandInfo{
 				Name:        "search",
-				Purpose:     "Search title, tags, status, kind, and markdown body across ADRs, SPECs, and domain entries. Reads Markdown by default; --use-index searches the cached index when it is fresh and otherwise falls back to Markdown with a warning.",
+				Purpose:     "Search title, tags, status, kind, and markdown body across ADRs and domain entries. Reads Markdown by default; --use-index searches the cached index when it is fresh and otherwise falls back to Markdown with a warning.",
 				Safety:      "read-only",
 				Selectors:   []string{"--query", "--status", "--tag", "--use-index"},
 				Examples:    []string{`canon search --query "database"`, "canon search --status deprecated", `canon search --query "database" --use-index`},
-				NextCommand: []string{"canon show --id ADR-0001", "canon show --id SPEC-0001", "canon index status"},
+				NextCommand: []string{"canon show --id ADR-0001", "canon index status"},
 				Mutating:    false,
 				HasDryRun:   false,
 			},
@@ -347,19 +297,6 @@ func commandTable() []commandEntry {
 				HasDryRun:   false,
 			},
 			handler: kindAdapter(runSearch, KindADR),
-		},
-		{
-			info: CommandInfo{
-				Name:        "spec search",
-				Purpose:     "Search title, tags, status, and markdown body across SPECs only. --use-index searches the cached index with Markdown fallback.",
-				Safety:      "read-only",
-				Selectors:   []string{"--query", "--status", "--tag", "--use-index"},
-				Examples:    []string{"canon spec search --query requirements"},
-				NextCommand: []string{"canon show --id SPEC-0001"},
-				Mutating:    false,
-				HasDryRun:   false,
-			},
-			handler: kindAdapter(runSearch, KindSPEC),
 		},
 		{
 			info: CommandInfo{
@@ -404,11 +341,11 @@ func commandTable() []commandEntry {
 		{
 			info: CommandInfo{
 				Name:        "accept",
-				Purpose:     "Mark an ADR, SPEC, or domain entry as accepted.",
+				Purpose:     "Mark an ADR or domain entry as accepted.",
 				Safety:      "write: updates one document metadata block and appends history",
 				Selectors:   []string{"--id", "--reason"},
-				Examples:    []string{"canon accept --id ADR-0001 --reason \"Approved by the team.\" --dry-run", "canon accept --id SPEC-0001 --reason \"Requirements approved.\" --dry-run"},
-				NextCommand: []string{"canon show --id ADR-0001", "canon show --id SPEC-0001"},
+				Examples:    []string{"canon accept --id ADR-0001 --reason \"Approved by the team.\" --dry-run"},
+				NextCommand: []string{"canon show --id ADR-0001"},
 				Mutating:    true,
 				HasDryRun:   true,
 			},
@@ -417,11 +354,11 @@ func commandTable() []commandEntry {
 		{
 			info: CommandInfo{
 				Name:        "reject",
-				Purpose:     "Mark an ADR, SPEC, or domain entry as rejected.",
+				Purpose:     "Mark an ADR or domain entry as rejected.",
 				Safety:      "write: updates one document metadata block and appends history",
 				Selectors:   []string{"--id", "--reason"},
-				Examples:    []string{"canon reject --id ADR-0001 --reason \"Chose a different approach.\" --dry-run", "canon reject --id SPEC-0001 --reason \"Requirements changed.\" --dry-run"},
-				NextCommand: []string{"canon show --id ADR-0001", "canon show --id SPEC-0001"},
+				Examples:    []string{"canon reject --id ADR-0001 --reason \"Chose a different approach.\" --dry-run"},
+				NextCommand: []string{"canon show --id ADR-0001"},
 				Mutating:    true,
 				HasDryRun:   true,
 			},
@@ -430,11 +367,11 @@ func commandTable() []commandEntry {
 		{
 			info: CommandInfo{
 				Name:        "supersede",
-				Purpose:     "Mark an ADR, SPEC, or domain entry as superseded by another document of the same kind.",
+				Purpose:     "Mark an ADR or domain entry as superseded by another document of the same kind.",
 				Safety:      "write: updates two document metadata blocks and appends history",
 				Selectors:   []string{"--id", "--by", "--reason"},
-				Examples:    []string{"canon supersede --id ADR-0001 --by ADR-0002 --reason \"Replaced by current architecture\" --dry-run", "canon supersede --id SPEC-0001 --by SPEC-0002 --reason \"Requirements split.\" --dry-run"},
-				NextCommand: []string{"canon show --id ADR-0001", "canon show --id SPEC-0001"},
+				Examples:    []string{"canon supersede --id ADR-0001 --by ADR-0002 --reason \"Replaced by current architecture\" --dry-run"},
+				NextCommand: []string{"canon show --id ADR-0001"},
 				Mutating:    true,
 				HasDryRun:   true,
 			},
@@ -445,11 +382,11 @@ func commandTable() []commandEntry {
 		{
 			info: CommandInfo{
 				Name:        "deprecate",
-				Purpose:     "Mark an ADR, SPEC, or domain entry as deprecated without a direct replacement.",
+				Purpose:     "Mark an ADR or domain entry as deprecated without a direct replacement.",
 				Safety:      "write: updates one document metadata block and appends history",
 				Selectors:   []string{"--id", "--reason"},
-				Examples:    []string{"canon deprecate --id ADR-0001 --reason \"No longer used\" --dry-run", "canon deprecate --id SPEC-0001 --reason \"Requirements moved.\" --dry-run"},
-				NextCommand: []string{"canon show --id ADR-0001", "canon show --id SPEC-0001"},
+				Examples:    []string{"canon deprecate --id ADR-0001 --reason \"No longer used\" --dry-run"},
+				NextCommand: []string{"canon show --id ADR-0001"},
 				Mutating:    true,
 				HasDryRun:   true,
 			},
@@ -460,11 +397,11 @@ func commandTable() []commandEntry {
 		{
 			info: CommandInfo{
 				Name:        "append",
-				Purpose:     "Append a dated appendix section to an ADR, SPEC, or domain entry. Disabled when .canon.jsonc sets conventions.append to false.",
+				Purpose:     "Append a dated appendix section to an ADR or domain entry. Disabled when .canon.jsonc sets conventions.append to false.",
 				Safety:      "write: appends markdown to one document",
 				Selectors:   []string{"--id", "--title", "--body"},
-				Examples:    []string{"canon append --id ADR-0001 --title \"2026 review\" --body \"Still valid.\"", "canon append --id SPEC-0001 --title Review --body \"Requirements still apply.\""},
-				NextCommand: []string{"canon show --id ADR-0001", "canon show --id SPEC-0001"},
+				Examples:    []string{"canon append --id ADR-0001 --title \"2026 review\" --body \"Still valid.\""},
+				NextCommand: []string{"canon show --id ADR-0001"},
 				Mutating:    true,
 				HasDryRun:   true,
 			},

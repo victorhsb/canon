@@ -10,17 +10,7 @@ after comparing shared-schema cost against failure containment. The choice
 changes provisioning, backup, and connection boundaries.
 
 **Result:** ADR, ready. It is a settled, system-shaping, non-obvious, narrow
-decision. Required tenant behavior, if any, should be judged separately as a
-SPEC.
-
-## SPEC
-
-**Candidate:** The approved password-reset capability must expire links after
-30 minutes and show an expired-link response. Acceptance checks exercise both
-conditions through the user-visible interface.
-
-**Result:** SPEC, ready. It records agreed, observable, testable behavior for
-one capability without explaining an architecture choice.
+decision.
 
 ## Domain Entry
 
@@ -46,24 +36,14 @@ canonical concept.
 return an order identifier; and "accepted order" means an order that passed
 policy checks but has not yet been allocated.
 
-**Result:** Split. Judge the event-store decision as a possible ADR, the
-observable operation result as a possible SPEC, and the specialized term as a
+**Result:** Split. Judge the event-store decision as a possible ADR, and the
+specialized term as a
 possible Domain Entry. Each piece must independently pass its full gate; the
 combined text fails every kind's narrowness test.
 
 Normative phrasing inside a candidate does not prove readiness. If the only
 evidence is that the text says "must" or "means," mark commitment or settled
 usage unknown until context establishes it.
-
-## Tighten Without Splitting
-
-**Candidate:** An approved, acceptance-tested requirement says failed invoice
-emails receive three attempts. The same proposal says to use exponential
-backoff, but no retry mechanism has been selected.
-
-**Result:** SPEC, ready, scoped to three attempts. The unselected backoff detail
-is not a second record kind and does not make the approved behavioral concern
-unready. Exclude it and explain the tighter scope.
 
 ## Right Kind, Not Ready
 

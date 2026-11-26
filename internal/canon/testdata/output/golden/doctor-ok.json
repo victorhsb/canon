@@ -15,16 +15,6 @@
         "message": "1 adr files parsed"
       },
       {
-        "name": "spec_directory",
-        "status": "ok",
-        "message": "t-spec exists"
-      },
-      {
-        "name": "spec_parse",
-        "status": "ok",
-        "message": "1 spec files parsed"
-      },
-      {
         "name": "domain_directory",
         "status": "ok",
         "message": "t-domain exists"
@@ -39,17 +29,12 @@
   "next_actions": [
     {
       "command": "canon list",
-      "description": "Inspect ADR, SPEC, and domain entry inventory.",
+      "description": "Inspect ADR and domain entry inventory.",
       "safety": "read-only"
     },
     {
       "command": "canon adr new --title \"...\" --dry-run",
       "description": "Preview creating a new ADR.",
-      "safety": "preview"
-    },
-    {
-      "command": "canon spec new --title \"...\" --dry-run",
-      "description": "Preview creating a new SPEC.",
       "safety": "preview"
     },
     {

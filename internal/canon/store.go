@@ -22,8 +22,6 @@ func NewStore(dir, kind string) Store {
 	}
 	if dir == "" {
 		switch kind {
-		case KindSPEC:
-			dir = defaultSpecDir
 		case KindDomain:
 			dir = defaultDomainDir
 		default:
@@ -143,8 +141,6 @@ func (s Store) WriteNew(title, status string, tags []string, sections map[string
 	adr.Path = filepath.Join(s.Dir, fmt.Sprintf("%04d-%s.md", next, slugify(title)))
 	var body string
 	switch s.Kind {
-	case KindSPEC:
-		body = renderSPEC(adr, sections)
 	case KindDomain:
 		body = renderDomain(adr, sections)
 	default:
@@ -238,35 +234,6 @@ func renderADR(adr ADR, sections map[string]string) string {
 `, adr.ID, adr.Title, adr.Status, defaultText(context, "TBD"), defaultText(decision, "TBD"), defaultText(consequences, "TBD"))
 }
 
-func renderSPEC(adr ADR, sections map[string]string) string {
-	context := sections["context"]
-	requirements := sections["requirements"]
-	constraints := sections["constraints"]
-	acceptance := sections["acceptance"]
-	return renderFrontMatter(adr) + fmt.Sprintf(`# %s: %s
-
-## Status
-
-%s
-
-## Context
-
-%s
-
-## Requirements
-
-%s
-
-## Constraints
-
-%s
-
-## Acceptance Criteria
-
-%s
-`, adr.ID, adr.Title, adr.Status, defaultText(context, "TBD"), defaultText(requirements, "TBD"), defaultText(constraints, "TBD"), defaultText(acceptance, "TBD"))
-}
-
 func renderDomain(adr ADR, sections map[string]string) string {
 	definition := sections["definition"]
 	avoid := renderAvoidList(sections["avoid"])
@@ -351,7 +318,7 @@ deprecated_by: %s
 func normalizeID(id string) (kind, normalized string, err error) {
 	id = strings.TrimSpace(strings.ToUpper(id))
 	id = strings.TrimPrefix(id, "#")
-	for _, k := range []string{KindADR, KindSPEC, KindDomain} {
+	for _, k := range []string{KindADR, KindDomain} {
 		prefix := kindPrefix(k)
 		if strings.HasPrefix(id, prefix) {
 			num, parseErr := strconv.Atoi(strings.TrimPrefix(id, prefix))
@@ -373,7 +340,7 @@ func numberFromID(id string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	for _, k := range []string{KindADR, KindSPEC, KindDomain} {
+	for _, k := range []string{KindADR, KindDomain} {
 		prefix := kindPrefix(k)
 		if strings.HasPrefix(normalized, prefix) {
 			return strconv.Atoi(strings.TrimPrefix(normalized, prefix))
@@ -388,8 +355,6 @@ func formatID(kind string, n int) string {
 
 func kindPrefix(kind string) string {
 	switch kind {
-	case KindSPEC:
-		return PrefixSPEC
 	case KindDomain:
 		return PrefixDomain
 	default:
@@ -400,8 +365,6 @@ func kindPrefix(kind string) string {
 func kindFromID(id string) string {
 	upper := strings.ToUpper(strings.TrimSpace(id))
 	switch {
-	case strings.HasPrefix(upper, PrefixSPEC):
-		return KindSPEC
 	case strings.HasPrefix(upper, PrefixDomain):
 		return KindDomain
 	case strings.HasPrefix(upper, PrefixADR):
@@ -414,7 +377,7 @@ func kindFromID(id string) string {
 func normalizeKind(value string) string {
 	value = strings.ToLower(strings.TrimSpace(value))
 	switch value {
-	case KindADR, KindSPEC, KindDomain:
+	case KindADR, KindDomain:
 		return value
 	default:
 		return ""

@@ -193,8 +193,6 @@ func (p listPayload) contextHeading() string {
 	switch p.scope {
 	case KindADR:
 		return "Architecture Decision Records"
-	case KindSPEC:
-		return "Specifications"
 	case KindDomain:
 		return "Domain Model"
 	default:
@@ -262,7 +260,7 @@ func (p planDryRunPayload) renderText(out io.Writer) {
 	renderPlanText(out, p.Plan)
 }
 
-// renderText makes a bare Plan text-capable so `adr init`, `spec init`, and
+// renderText makes a bare Plan text-capable so `adr init` and
 // `domain init` render their preview instead of silently omitting it.
 func (p Plan) renderText(out io.Writer) {
 	renderPlanText(out, p)

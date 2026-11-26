@@ -30,16 +30,11 @@
       "skill",
       "skill install",
       "skill update",
-      "spec init",
-      "spec list",
-      "spec new",
-      "spec search",
-      "spec validate",
       "supersede",
       "validate",
       "version"
     ],
-    "purpose": "Manage Architecture Decision Records, Specs, and Domain Entries for agent workflows."
+    "purpose": "Manage Architecture Decision Records and Domain Entries for agent workflows."
   },
   "next_actions": [
     {
@@ -49,7 +44,7 @@
     },
     {
       "command": "canon doctor",
-      "description": "Check ADR, SPEC, and domain repository readiness.",
+      "description": "Check ADR and domain repository readiness.",
       "safety": "read-only"
     },
     {

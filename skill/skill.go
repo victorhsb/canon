@@ -51,14 +51,14 @@ type assetSpec struct {
 var assetSpecs = []assetSpec{
 	{
 		name:    "canon",
-		version: "12",
+		version: "13",
 		files: []payloadFile{
 			{relativePath: "SKILL.md", sourcePath: "assets/canon/SKILL.md"},
 		},
 	},
 	{
 		name:    "canon-record-gate",
-		version: "3",
+		version: "4",
 		files: []payloadFile{
 			{relativePath: "SKILL.md", sourcePath: "assets/canon-record-gate/SKILL.md"},
 			{relativePath: "references/boundary-examples.md", sourcePath: "assets/canon-record-gate/references/boundary-examples.md"},
@@ -353,7 +353,7 @@ func assetHash(spec assetSpec) string {
 }
 
 func renderAgent(target, body string) (string, error) {
-	const description = "Judges whether an ADR, SPEC, or Domain entry in a canon corpus earns its place. Use when asked to review, audit, gate, or stress-test a canon document before creation or after acceptance. Read-only: returns a structured verdict and never mutates the corpus."
+	const description = "Judges whether an ADR or Domain entry in a canon corpus earns its place. Use when asked to review, audit, gate, or stress-test a canon document before creation or after acceptance. Read-only: returns a structured verdict and never mutates the corpus."
 
 	var frontmatter string
 	switch target {

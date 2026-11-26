@@ -33,7 +33,7 @@ type validationResult struct {
 // covers the whole corpus; a kind scopes the run to that store.
 func storesForScope(repo Repo, kind string) []Store {
 	if kind == "" {
-		return []Store{repo.ADR, repo.Spec, repo.Domain}
+		return []Store{repo.ADR, repo.Domain}
 	}
 	return []Store{repo.StoreForKind(kind)}
 }
@@ -53,7 +53,7 @@ type scannedDoc struct {
 // store's kind with the error.
 func shallowDiagnostics(repo Repo, cfg EffectiveConfig) (checks []Diagnostic, failedKind string, err error) {
 	checks = []Diagnostic{}
-	for _, store := range []Store{repo.ADR, repo.Spec, repo.Domain} {
+	for _, store := range []Store{repo.ADR, repo.Domain} {
 		label := store.Kind
 		if !store.Exists() {
 			if !cfg.KindRequired(label) {

@@ -168,7 +168,6 @@ func policyFlagsForTest(t *testing.T, config string, present ...string) (string,
 	}
 	return root, []string{
 		"--adr-dir", filepath.Join(root, "docs", "adr"),
-		"--spec-dir", filepath.Join(root, "docs", "spec"),
 		"--domain-dir", filepath.Join(root, "docs", "domain"),
 	}
 }
@@ -232,9 +231,6 @@ func TestResolvePartialAndCompleteFiles(t *testing.T) {
 	}
 	if allowed, restricted := cfg.AllowedTags(KindDomain); !restricted || len(allowed) != 0 {
 		t.Fatalf("domain tags = %v restricted = %v, want explicit empty", allowed, restricted)
-	}
-	if _, restricted := cfg.AllowedTags(KindSPEC); restricted {
-		t.Fatal("spec should be unrestricted when omitted from tags")
 	}
 }
 
@@ -346,7 +342,7 @@ func containsFinding(findings []Diagnostic, name string) bool {
 func TestFindConfigFileFromAbsentDirectory(t *testing.T) {
 	t.Parallel()
 	root, dirs := policyFlagsForTest(t, `{"conventions": {"append": false}}`, "adr")
-	// The spec and domain directories are configured but absent; discovery
+	// The domain directory is configured but absent; discovery
 	// must still find the root file by walking up from the absent path.
 	absPath, found, err := findConfigFile(dirs[3])
 	if err != nil || !found {
@@ -362,7 +358,7 @@ func TestResolveRepoPolicyScenarios(t *testing.T) {
 
 	// All stores under one root share one file.
 	_, dirs := policyFlagsForTest(t, `{"conventions": {"append": false}}`, "adr", "domain")
-	repo := NewRepo(GlobalOptions{ADRDir: dirs[1], SpecDir: dirs[3], DomainDir: dirs[5], Format: "json"})
+	repo := NewRepo(GlobalOptions{ADRDir: dirs[1], DomainDir: dirs[3], Format: "json"})
 	resolution, cfgErr := resolveRepoPolicy(repo)
 	if cfgErr != nil {
 		t.Fatalf("shared root must resolve: %v", cfgErr)
@@ -373,7 +369,7 @@ func TestResolveRepoPolicyScenarios(t *testing.T) {
 
 	// No file anywhere yields defaults.
 	_, dirs = policyFlagsForTest(t, "", "adr")
-	repo = NewRepo(GlobalOptions{ADRDir: dirs[1], SpecDir: dirs[3], DomainDir: dirs[5], Format: "json"})
+	repo = NewRepo(GlobalOptions{ADRDir: dirs[1], DomainDir: dirs[3], Format: "json"})
 	resolution, cfgErr = resolveRepoPolicy(repo)
 	if cfgErr != nil {
 		t.Fatalf("no file must resolve to defaults: %v", cfgErr)
@@ -390,7 +386,6 @@ func TestResolveRepoPolicyScenarios(t *testing.T) {
 	}
 	repo = NewRepo(GlobalOptions{
 		ADRDir:    filepath.Join(rootA, "docs", "adr"),
-		SpecDir:   filepath.Join(rootB, "docs", "spec"),
 		DomainDir: filepath.Join(rootB, "docs", "domain"),
 		Format:    "json",
 	})
@@ -510,12 +505,12 @@ func TestConfigCommandsRegistered(t *testing.T) {
 	}
 }
 
-func TestRequiredKindsMakeOptionalSpecHealthy(t *testing.T) {
+func TestRequiredKindsMakeOptionalDomainHealthy(t *testing.T) {
 	t.Parallel()
-	config := `{"conventions": {"required_kinds": ["adr", "domain"]}}`
-	_, dirs := policyFlagsForTest(t, config, "adr", "domain")
+	config := `{"conventions": {"required_kinds": ["adr"]}}`
+	_, dirs := policyFlagsForTest(t, config, "adr")
 
-	// Doctor reports the absent optional SPEC store as ok and never suggests
+	// Doctor reports the absent optional domain store as ok and never suggests
 	// initializing it.
 	args := append(append([]string{}, dirs...), "doctor")
 	code, env := runForTest(t, args...)
@@ -528,9 +523,9 @@ func TestRequiredKindsMakeOptionalSpecHealthy(t *testing.T) {
 	sawOptionalOK := false
 	for _, raw := range env["data"].(map[string]any)["diagnostics"].([]any) {
 		d := raw.(map[string]any)
-		if d["name"] == "spec_directory" {
+		if d["name"] == "domain_directory" {
 			if d["status"] != "ok" {
-				t.Fatalf("spec_directory = %#v", d)
+				t.Fatalf("domain_directory = %#v", d)
 			}
 			if _, hasFix := d["suggested_fix"]; hasFix {
 				t.Fatalf("optional store must not suggest init: %#v", d)
@@ -539,15 +534,15 @@ func TestRequiredKindsMakeOptionalSpecHealthy(t *testing.T) {
 		}
 	}
 	if !sawOptionalOK {
-		t.Fatalf("expected a spec_directory diagnostic: %#v", env["data"])
+		t.Fatalf("expected a domain_directory diagnostic: %#v", env["data"])
 	}
 	for _, raw := range env["next_actions"].([]any) {
-		if strings.Contains(raw.(map[string]any)["command"].(string), "spec init") {
-			t.Fatalf("doctor must not suggest spec init: %#v", raw)
+		if strings.Contains(raw.(map[string]any)["command"].(string), "domain init") {
+			t.Fatalf("doctor must not suggest domain init: %#v", raw)
 		}
 	}
 
-	// Corpus validation is healthy with zero spec files.
+	// Corpus validation is healthy with zero domain files.
 	args = append(append([]string{}, dirs...), "validate")
 	code, env = runForTest(t, args...)
 	if code != exitOK {
@@ -558,23 +553,23 @@ func TestRequiredKindsMakeOptionalSpecHealthy(t *testing.T) {
 	}
 
 	// Kind-scoped validation of the absent optional store is healthy.
-	args = append(append([]string{}, dirs...), "spec", "validate")
+	args = append(append([]string{}, dirs...), "domain", "validate")
 	code, env = runForTest(t, args...)
 	if code != exitOK || env["status"] != "ok" {
-		t.Fatalf("spec validate code = %d status = %v", code, env["status"])
+		t.Fatalf("domain validate code = %d status = %v", code, env["status"])
 	}
 	data := env["data"].(map[string]any)
 	if data["summary"].(map[string]any)["files_checked"] != float64(0) {
 		t.Fatalf("summary = %#v", data["summary"])
 	}
 
-	// An existing optional SPEC store is still scanned. The hand-written doc
+	// An existing optional domain store is still scanned. The hand-written doc
 	// references a missing document, which deep validation must catch.
-	if code, _ := runForTest(t, append(append([]string{}, dirs...), "spec", "init")...); code != exitOK {
-		t.Fatal("spec init failed")
+	if code, _ := runForTest(t, append(append([]string{}, dirs...), "domain", "init")...); code != exitOK {
+		t.Fatal("domain init failed")
 	}
-	writeRawDocForTest(t, dirs[3], "0001-broken.md", "SPEC-0001", "accepted", "tags: fine\nsuperseded_by: SPEC-0099\n")
-	args = append(append([]string{}, dirs...), "spec", "validate")
+	writeRawDocForTest(t, dirs[3], "0001-broken.md", "DM-0001", "accepted", "tags: fine\nsuperseded_by: DM-0099\n")
+	args = append(append([]string{}, dirs...), "domain", "validate")
 	code, env = runForTest(t, args...)
 	findings := env["data"].(map[string]any)["findings"].([]any)
 	sawBroken := false
@@ -682,9 +677,9 @@ func TestLifecycleReasonRequiredByConfig(t *testing.T) {
 func TestProposedCreationRequiredByConfig(t *testing.T) {
 	t.Parallel()
 	config := `{"conventions": {"lifecycle": {"new_documents_must_be_proposed": true}}}`
-	_, dirs := policyFlagsForTest(t, config, "adr", "spec", "domain")
+	_, dirs := policyFlagsForTest(t, config, "adr", "domain")
 	base := append([]string{}, dirs...)
-	for _, kind := range []string{"adr", "spec", "domain"} {
+	for _, kind := range []string{"adr", "domain"} {
 		for _, extra := range []string{"", "--dry-run"} {
 			args := append(append([]string{}, base...), kind, "new", "--title", "Gate check", "--status", "accepted")
 			if extra != "" {
@@ -710,7 +705,7 @@ func TestProposedCreationRequiredByConfig(t *testing.T) {
 func TestTagPolicyEnforcement(t *testing.T) {
 	t.Parallel()
 	config := `{"conventions": {"tags": {"adr": {"allowed": ["cli", "config"]}}}}`
-	_, dirs := policyFlagsForTest(t, config, "adr", "spec")
+	_, dirs := policyFlagsForTest(t, config, "adr", "domain")
 	base := append([]string{}, dirs...)
 
 	// Allowed tags pass.
@@ -737,8 +732,8 @@ func TestTagPolicyEnforcement(t *testing.T) {
 		t.Fatalf("rejected creation must not write: err = %v entries = %v", err, entries)
 	}
 	// Unrestricted kinds keep free-form tags.
-	if code, env := runForTest(t, append(base, "spec", "new", "--title", "Free tags", "--tags", "whatever")...); code != exitOK {
-		t.Fatalf("unrestricted spec code = %d env = %#v", code, env["error"])
+	if code, env := runForTest(t, append(base, "domain", "new", "--title", "Free tags", "--tags", "whatever")...); code != exitOK {
+		t.Fatalf("unrestricted domain code = %d env = %#v", code, env["error"])
 	}
 	// Hand-edited violations are found by deep validation.
 	writeRawDocForTest(t, dirs[1], "0002-handmade.md", "ADR-0002", "accepted", "tags: rogue\n")
@@ -793,8 +788,8 @@ func TestMalformedConfigFailsPolicyCommands(t *testing.T) {
 		}
 	}
 	// init stays usable for recovery even with a malformed configuration.
-	if code, env := runForTest(t, append(base, "spec", "init")...); code != exitOK {
-		t.Fatalf("spec init must work under malformed config: code = %d env = %#v", code, env["error"])
+	if code, env := runForTest(t, append(base, "domain", "init")...); code != exitOK {
+		t.Fatalf("domain init must work under malformed config: code = %d env = %#v", code, env["error"])
 	}
 	// Nothing else wrote or mutated files.
 	entries, err := os.ReadDir(dirs[1])

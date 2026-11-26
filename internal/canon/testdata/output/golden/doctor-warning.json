@@ -15,27 +15,17 @@
         "message": "1 adr files parsed"
       },
       {
-        "name": "spec_directory",
-        "status": "warning",
-        "message": "t-spec does not exist",
-        "suggested_fix": "Run `canon spec init --dry-run`, then `canon spec init`."
-      },
-      {
         "name": "domain_directory",
-        "status": "ok",
-        "message": "t-domain exists"
-      },
-      {
-        "name": "domain_parse",
-        "status": "ok",
-        "message": "1 domain files parsed"
+        "status": "warning",
+        "message": "t-domain does not exist",
+        "suggested_fix": "Run `canon domain init --dry-run`, then `canon domain init`."
       }
     ]
   },
   "next_actions": [
     {
-      "command": "canon spec init --dry-run",
-      "description": "Preview creating the SPEC directory.",
+      "command": "canon domain init --dry-run",
+      "description": "Preview creating the domain directory.",
       "safety": "preview"
     }
   ]

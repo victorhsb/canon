@@ -19,7 +19,7 @@ import (
 // deterministic. Payloads that include runtime values (today's date, the
 // build version) use focused decoded comparisons instead of goldens.
 
-var corpusFlagSet = []string{"--adr-dir", "t-adr", "--spec-dir", "t-spec", "--domain-dir", "t-domain"}
+var corpusFlagSet = []string{"--adr-dir", "t-adr", "--domain-dir", "t-domain"}
 
 // stageCorpus copies the static corpus into a temporary directory and
 // switches the test to it so store paths and skill target paths stay
@@ -98,12 +98,12 @@ func TestJSONMatchesGoldenBytes(t *testing.T) {
 		},
 		{
 			name:     "init-dryrun",
-			args:     []string{"--adr-dir", "t-newstore", "--spec-dir", "t-spec", "--domain-dir", "t-domain", "adr", "init", "--dry-run"},
+			args:     []string{"--adr-dir", "t-newstore", "--domain-dir", "t-domain", "adr", "init", "--dry-run"},
 			wantExit: exitOK,
 		},
 		{
 			name:     "init-applied",
-			args:     []string{"--adr-dir", "t-newstore", "--spec-dir", "t-spec", "--domain-dir", "t-domain", "adr", "init"},
+			args:     []string{"--adr-dir", "t-newstore", "--domain-dir", "t-domain", "adr", "init"},
 			wantExit: exitOK,
 		},
 		{name: "list", args: append(corpusFlagSet, "list"), wantExit: exitOK},
@@ -117,8 +117,8 @@ func TestJSONMatchesGoldenBytes(t *testing.T) {
 			name: "doctor-warning",
 			args: append(corpusFlagSet, "doctor"),
 			setup: func(t *testing.T) {
-				if err := os.RemoveAll("t-spec"); err != nil {
-					t.Fatalf("remove t-spec: %v", err)
+				if err := os.RemoveAll("t-domain"); err != nil {
+					t.Fatalf("remove t-domain: %v", err)
 				}
 			},
 			wantExit: exitOK,
@@ -133,7 +133,7 @@ func TestJSONMatchesGoldenBytes(t *testing.T) {
 		},
 		{
 			name:     "accept-applied",
-			args:     append(corpusFlagSet, "accept", "--id", "SPEC-0001", "--reason", "Ratified."),
+			args:     append(corpusFlagSet, "accept", "--id", "DM-0001", "--reason", "Ratified."),
 			wantExit: exitOK,
 		},
 		{
@@ -166,7 +166,7 @@ func TestJSONMatchesGoldenBytes(t *testing.T) {
 // `version` reflects build metadata.
 func TestNewDryRunJSONShape(t *testing.T) {
 	stageCorpus(t)
-	code, output := runRawForTest(t, "--adr-dir", "t-adr", "--spec-dir", "t-spec", "--domain-dir", "t-domain", "adr", "new", "--title", "Tentative Plan", "--tags", "storage", "--dry-run")
+	code, output := runRawForTest(t, "--adr-dir", "t-adr", "--domain-dir", "t-domain", "adr", "new", "--title", "Tentative Plan", "--tags", "storage", "--dry-run")
 	if code != exitOK {
 		t.Fatalf("code = %d\n%s", code, output)
 	}
@@ -383,7 +383,6 @@ func TestContextProjections(t *testing.T) {
 	}{
 		{name: "combined", payload: listPayload{ADRs: []ADR{doc}, Count: 1}, want: "## Project Documents\n\n- `ADR-0001`: Use SQLite\n"},
 		{name: "adr", payload: listPayload{ADRs: []ADR{doc}, Count: 1, scope: KindADR}, want: "## Architecture Decision Records\n\n- `ADR-0001`: Use SQLite\n"},
-		{name: "spec", payload: listPayload{ADRs: []ADR{doc}, Count: 1, scope: KindSPEC}, want: "## Specifications\n\n- `ADR-0001`: Use SQLite\n"},
 		{name: "domain", payload: listPayload{ADRs: []ADR{doc}, Count: 1, scope: KindDomain}, want: "## Domain Model\n\n- `ADR-0001`: Use SQLite\n"},
 		{name: "empty", payload: listPayload{ADRs: []ADR{}, Count: 0, scope: KindADR}, want: "## Architecture Decision Records\n\n_No matching documents._\n"},
 	}
@@ -417,17 +416,12 @@ func TestTextCommandsEmitPayloadData(t *testing.T) {
 		{
 			name:     "combined list",
 			args:     append(append([]string{"--format", "text"}, corpusFlagSet...), "list"),
-			contains: []string{"count: 3", "ADR-0001: Use SQLite", "SPEC-0001: Storage Requirements", "DM-0001: Decision Record"},
+			contains: []string{"count: 2", "ADR-0001: Use SQLite", "DM-0001: Decision Record"},
 		},
 		{
 			name:     "adr list",
 			args:     append(append([]string{"--format", "text"}, corpusFlagSet...), "adr", "list"),
 			contains: []string{"count: 1", "ADR-0001: Use SQLite"},
-		},
-		{
-			name:     "spec list",
-			args:     append(append([]string{"--format", "text"}, corpusFlagSet...), "spec", "list"),
-			contains: []string{"count: 1", "SPEC-0001: Storage Requirements"},
 		},
 		{
 			name:     "domain list",
@@ -443,11 +437,6 @@ func TestTextCommandsEmitPayloadData(t *testing.T) {
 			name:     "adr search",
 			args:     append(append([]string{"--format", "text"}, corpusFlagSet...), "adr", "search", "--query", "querying"),
 			contains: []string{"query: querying", "ADR-0001: Use SQLite"},
-		},
-		{
-			name:     "spec search",
-			args:     append(append([]string{"--format", "text"}, corpusFlagSet...), "spec", "search", "--query", "requirements"),
-			contains: []string{"query: requirements", "SPEC-0001: Storage Requirements"},
 		},
 		{
 			name:     "domain search",
@@ -467,7 +456,7 @@ func TestTextCommandsEmitPayloadData(t *testing.T) {
 		{
 			name:     "validate",
 			args:     append(append([]string{"--format", "text"}, corpusFlagSet...), "validate"),
-			contains: []string{"findings:", "summary: files_checked=3 errors=0 warnings=0"},
+			contains: []string{"findings:", "summary: files_checked=2 errors=0 warnings=0"},
 		},
 		{
 			name:     "adr validate",
@@ -501,13 +490,8 @@ func TestTextCommandsEmitPayloadData(t *testing.T) {
 		},
 		{
 			name:     "adr init dry run",
-			args:     []string{"--format", "text", "--adr-dir", "t-newstore", "--spec-dir", "t-spec", "--domain-dir", "t-domain", "adr", "init", "--dry-run"},
+			args:     []string{"--format", "text", "--adr-dir", "t-newstore", "--domain-dir", "t-domain", "adr", "init", "--dry-run"},
 			contains: []string{"adr init: planned", "plan:", "mkdir: t-newstore"},
-		},
-		{
-			name:     "spec init dry run",
-			args:     []string{"--format", "text", "--spec-dir", "t-newspec", "spec", "init", "--dry-run"},
-			contains: []string{"spec init: planned", "plan:", "mkdir: t-newspec"},
 		},
 		{
 			name:     "domain init dry run",

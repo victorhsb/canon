@@ -27,7 +27,6 @@ func seedCorpus(t *testing.T) (Repo, string) {
 	root := t.TempDir()
 	repo := Repo{
 		ADR:    NewStore(filepath.Join(root, "adr"), KindADR),
-		Spec:   NewStore(filepath.Join(root, "spec"), KindSPEC),
 		Domain: NewStore(filepath.Join(root, "domain"), KindDomain),
 	}
 	seeds := []struct {
@@ -38,7 +37,7 @@ func seedCorpus(t *testing.T) (Repo, string) {
 	}{
 		{repo.ADR, "Use SQLite for storage", "accepted", []string{"storage"}},
 		{repo.ADR, "Cache query results", "proposed", nil},
-		{repo.Spec, "Search requirements", "accepted", []string{"search"}},
+		{repo.ADR, "Search requirements", "accepted", []string{"search"}},
 		{repo.Domain, "Corpus", "accepted", []string{"glossary"}},
 	}
 	for _, seed := range seeds {
@@ -318,7 +317,7 @@ func TestUnreadableCacheFile(t *testing.T) {
 func TestIndexRebuildRejectsMalformedMarkdown(t *testing.T) {
 	isolateCache(t)
 	repo, root := seedCorpus(t)
-	flags := []string{"--adr-dir", repo.ADR.Dir, "--spec-dir", repo.Spec.Dir, "--domain-dir", repo.Domain.Dir}
+	flags := []string{"--adr-dir", repo.ADR.Dir, "--domain-dir", repo.Domain.Dir}
 	broken := filepath.Join(root, "adr", "0099-broken.md")
 	if err := os.WriteFile(broken, []byte("no front matter"), 0o644); err != nil {
 		t.Fatalf("seed broken: %v", err)
@@ -360,7 +359,7 @@ func TestIndexRebuildRejectsMalformedMarkdown(t *testing.T) {
 func TestIndexRebuildDryRunCreatesNothing(t *testing.T) {
 	cacheRoot := isolateCache(t)
 	repo, root := seedCorpus(t)
-	code, env := runForTest(t, "--adr-dir", repo.ADR.Dir, "--spec-dir", repo.Spec.Dir, "--domain-dir", repo.Domain.Dir, "index", "rebuild", "--dry-run")
+	code, env := runForTest(t, "--adr-dir", repo.ADR.Dir, "--domain-dir", repo.Domain.Dir, "index", "rebuild", "--dry-run")
 	if code != exitOK || env["status"] != "planned" {
 		t.Fatalf("dry-run code=%d env=%#v", code, env)
 	}
@@ -383,7 +382,7 @@ func TestIndexRebuildDryRunCreatesNothing(t *testing.T) {
 func TestIndexStatusTransitionsThroughCLI(t *testing.T) {
 	isolateCache(t)
 	repo, _ := seedCorpus(t)
-	flags := []string{"--adr-dir", repo.ADR.Dir, "--spec-dir", repo.Spec.Dir, "--domain-dir", repo.Domain.Dir}
+	flags := []string{"--adr-dir", repo.ADR.Dir, "--domain-dir", repo.Domain.Dir}
 
 	code, env := runForTest(t, append(flags, "index", "status")...)
 	if code != exitOK {
@@ -422,7 +421,7 @@ func TestIndexStatusTransitionsThroughCLI(t *testing.T) {
 func TestIndexedSearchParityWithMarkdown(t *testing.T) {
 	isolateCache(t)
 	repo, _ := seedCorpus(t)
-	flags := []string{"--adr-dir", repo.ADR.Dir, "--spec-dir", repo.Spec.Dir, "--domain-dir", repo.Domain.Dir}
+	flags := []string{"--adr-dir", repo.ADR.Dir, "--domain-dir", repo.Domain.Dir}
 	if code, env := runForTest(t, append(flags, "index", "rebuild")...); code != exitOK {
 		t.Fatalf("rebuild code = %d env=%#v", code, env)
 	}
@@ -436,7 +435,6 @@ func TestIndexedSearchParityWithMarkdown(t *testing.T) {
 		{"search", "--tag", "storage"},
 		{"search", "--query", "xyz-no-match"},
 		{"adr", "search", "--query", "storage"},
-		{"spec", "search", "--query", "requirements"},
 		{"domain", "search", "--query", "corpus"},
 		{"domain", "search", "--status", "accepted"},
 	}
@@ -464,7 +462,7 @@ func TestIndexedSearchParityWithMarkdown(t *testing.T) {
 func TestIndexedSearchFallsBackWithWarning(t *testing.T) {
 	cacheRoot := isolateCache(t)
 	repo, _ := seedCorpus(t)
-	flags := []string{"--adr-dir", repo.ADR.Dir, "--spec-dir", repo.Spec.Dir, "--domain-dir", repo.Domain.Dir}
+	flags := []string{"--adr-dir", repo.ADR.Dir, "--domain-dir", repo.Domain.Dir}
 
 	// Absent index: identical results, non-fatal fallback warning.
 	code, plain := runForTest(t, append(flags, "search", "--query", "storage")...)
@@ -549,7 +547,7 @@ func TestIndexedSearchParityWithTrickyQueries(t *testing.T) {
 	if _, err := tricky.WriteNew(`Quoted "decision" <tag> & more`, "accepted", nil, map[string]string{"context": "escapes: \"quoted\" back\\slash <html> & ampersand"}); err != nil {
 		t.Fatalf("seed tricky: %v", err)
 	}
-	flags := []string{"--adr-dir", repo.ADR.Dir, "--spec-dir", repo.Spec.Dir, "--domain-dir", repo.Domain.Dir}
+	flags := []string{"--adr-dir", repo.ADR.Dir, "--domain-dir", repo.Domain.Dir}
 	if code, env := runForTest(t, append(flags, "index", "rebuild")...); code != exitOK {
 		t.Fatalf("rebuild code = %d env=%#v", code, env)
 	}
@@ -613,7 +611,6 @@ func TestIndexRebuildEmptyCorpus(t *testing.T) {
 	root := t.TempDir()
 	flags := []string{
 		"--adr-dir", filepath.Join(root, "adr"),
-		"--spec-dir", filepath.Join(root, "spec"),
 		"--domain-dir", filepath.Join(root, "domain"),
 	}
 	code, env := runForTest(t, append(flags, "index", "rebuild")...)

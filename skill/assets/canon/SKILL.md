@@ -1,6 +1,6 @@
 ---
 name: canon
-description: Manage Architecture Decision Records (ADRs), SPECs, and domain entries with the canon CLI. Use whenever creating, recording, or revisiting an architectural decision; defining or updating a canonical domain concept; transitioning an ADR, SPEC, or domain entry through its lifecycle (accept, reject, supersede, deprecate, append); querying decision history or the domain model; or initializing document storage - even if the user does not mention canon by name.
+description: Manage Architecture Decision Records (ADRs) and domain entries with the canon CLI. Use whenever creating, recording, or revisiting an architectural decision; defining or updating a canonical domain concept; transitioning an ADR or domain entry through its lifecycle (accept, reject, supersede, deprecate, append); querying decision history or the domain model; or initializing document storage - even if the user does not mention canon by name.
 ---
 
 # CANON Agent Skill
@@ -11,11 +11,11 @@ Use canon to manage Architecture Decision Records without guessing repository st
 
 1. Start with `canon commands` to inspect command metadata, side effects, selectors, examples, and dry-run availability.
 2. Run `canon config show` to learn the repository's enforced conventions before mutating documents: which kinds are required, whether lifecycle transitions require `--reason`, whether new documents must start as `proposed`, and which tags each kind allows. A kind that is not required may be absent and healthy; its commands still work once its store exists. Errors with category `config` (`invalid_config`, `config_scope_mismatch`, `reason_required_by_config`, `initial_status_restricted`, `disallowed_tag`, `append_disabled`) mean repository policy was enforced; satisfy the policy (adjust reason, status, or tags, or fix the configuration) instead of retrying the same call. Run `canon config validate` when the configuration file itself looks broken.
-3. Run `canon doctor` before mutating documents. If it reports a missing required ADR, SPEC, or domain directory, initialize it with `canon adr init`, `canon spec init`, or `canon domain init`. Doctor also flags domain-model integrity problems: duplicate accepted titles and references to superseded or deprecated entries. For deep integrity checks (malformed files, duplicate ids, broken references, reciprocity, metadata validity), run `canon validate` — doctor answers "can I work here?", validate answers "is my corpus healthy?".
+3. Run `canon doctor` before mutating documents. If it reports a missing required ADR or domain directory, initialize it with `canon adr init` or `canon domain init`. Doctor also flags domain-model integrity problems: duplicate accepted titles and references to superseded or deprecated entries. For deep integrity checks (malformed files, duplicate ids, broken references, reciprocity, metadata validity), run `canon validate` — doctor answers "can I work here?", validate answers "is my corpus healthy?".
 3. Use JSON output unless a human explicitly asks for text or a bounded prompt projection. For prompt injection, `canon --format context adr list --status accepted` emits concise Markdown; use context format only with list commands. Every JSON response has `schema_version`, `status`, `data`, and optional `error` / `next_actions`.
 4. Single-document mutations (`accept`, `reject`, `deprecate`, `append`, `new`, `init`) are reversible via git; run them directly and verify with `canon show --id ...`. Run `canon supersede` with `--dry-run` first and check the returned plan, because it mutates two documents reciprocally; a correct dry-run carries `No changes were made.` in warnings.
-5. Use `canon list` (all kinds), `canon adr list` / `canon spec list` / `canon domain list`, `canon search --query ...`, and `canon show --id ...` to gather context before changing a document.
-6. Prefer selectors from CLI output. Document ids are stable strings like `ADR-0001`, `SPEC-0001`, and `DM-0001` and can be passed to `--id` or `--by`.
+5. Use `canon list` (all kinds), `canon adr list` / `canon domain list`, `canon search --query ...`, and `canon show --id ...` to gather context before changing a document.
+6. Prefer selectors from CLI output. Document ids are stable strings like `ADR-0001` and `DM-0001` and can be passed to `--id` or `--by`.
 
 ## Common commands
 
@@ -23,7 +23,6 @@ Apply these directly and verify with `canon show --id ...` (rule 4); preview `su
 
 ```sh
 canon adr new --title "Use SQLite for local query index" --status proposed --context "Agents need fast local lookup." --decision "Use SQLite-backed indexes."
-canon spec new --title "Local query index" --requirements "Return ADRs by tag." --acceptance "canon list --tag storage returns ADR-0001."
 canon domain new --title "ADR" --definition "A dated, narrowly-scoped architecture commitment." --avoid "design doc: too broad; ticket: tracks work, not decisions"
 canon accept --id ADR-0001 --reason "Approved by the team."
 canon reject --id ADR-0001 --reason "Chose a different approach."

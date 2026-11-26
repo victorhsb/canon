@@ -34,5 +34,5 @@ jobs:
       - name: Validate repository configuration
         run: go run ./cmd/canon config validate
 
-      - name: Validate ADR/SPEC/Domain corpus
+      - name: Validate ADR and Domain corpus
         run: go run ./cmd/canon validate

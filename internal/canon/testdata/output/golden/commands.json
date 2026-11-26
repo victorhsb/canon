@@ -26,7 +26,7 @@
       },
       {
         "name": "doctor",
-        "purpose": "Check whether required ADR, SPEC, and domain storage is present and parseable, and flag domain-model integrity problems (duplicate accepted titles, references to superseded or deprecated entries). Required kinds come from repository configuration; absent optional stores are healthy.",
+        "purpose": "Check whether required ADR and domain storage is present and parseable, and flag domain-model integrity problems (duplicate accepted titles, references to superseded or deprecated entries). Required kinds come from repository configuration; absent optional stores are healthy.",
         "mutating": false,
         "has_dry_run": false,
         "safety": "read-only",
@@ -65,22 +65,6 @@
         ],
         "examples": [
           "canon adr validate"
-        ],
-        "next_commands": [
-          "canon validate"
-        ]
-      },
-      {
-        "name": "spec validate",
-        "purpose": "Run the corpus integrity checks scoped to the SPEC directory.",
-        "mutating": false,
-        "has_dry_run": false,
-        "safety": "read-only",
-        "selectors": [
-          "--strict"
-        ],
-        "examples": [
-          "canon spec validate"
         ],
         "next_commands": [
           "canon validate"
@@ -143,17 +127,6 @@
         ]
       },
       {
-        "name": "spec init",
-        "purpose": "Create the SPEC directory if it does not exist.",
-        "mutating": true,
-        "has_dry_run": true,
-        "safety": "write: creates directory only",
-        "examples": [
-          "canon spec init --dry-run",
-          "canon spec init"
-        ]
-      },
-      {
         "name": "domain init",
         "purpose": "Create the domain entry directory if it does not exist.",
         "mutating": true,
@@ -185,25 +158,6 @@
         ]
       },
       {
-        "name": "spec new",
-        "purpose": "Create a new SPEC markdown file with parseable metadata. SPECs capture functional requirements.",
-        "mutating": true,
-        "has_dry_run": true,
-        "safety": "write: creates one markdown file",
-        "selectors": [
-          "--title",
-          "--status",
-          "--tags"
-        ],
-        "examples": [
-          "canon spec new --title \"Local query index\" --requirements \"Return ADRs by tag.\" --acceptance \"list --tag storage works.\" --dry-run"
-        ],
-        "next_commands": [
-          "canon spec list",
-          "canon show --id SPEC-0001"
-        ]
-      },
-      {
         "name": "domain new",
         "purpose": "Create a new domain entry markdown file with parseable metadata. Domain entries define one canonical concept each: its definition, avoided terms with reasons, and relationships.",
         "mutating": true,
@@ -227,7 +181,7 @@
       },
       {
         "name": "list",
-        "purpose": "List ADR, SPEC, and domain entry summaries together in deterministic order.",
+        "purpose": "List ADR and domain entry summaries together in deterministic order.",
         "mutating": false,
         "has_dry_run": false,
         "safety": "read-only",
@@ -242,7 +196,6 @@
         ],
         "next_commands": [
           "canon show --id ADR-0001",
-          "canon show --id SPEC-0001",
           "canon show --id DM-0001",
           "canon search --query text"
         ]
@@ -268,26 +221,6 @@
         ]
       },
       {
-        "name": "spec list",
-        "purpose": "List SPEC summaries in deterministic order.",
-        "mutating": false,
-        "has_dry_run": false,
-        "safety": "read-only",
-        "selectors": [
-          "--status",
-          "--tag"
-        ],
-        "examples": [
-          "canon spec list",
-          "canon spec list --tag storage",
-          "canon --format context spec list --status accepted"
-        ],
-        "next_commands": [
-          "canon show --id SPEC-0001",
-          "canon spec search --query text"
-        ]
-      },
-      {
         "name": "domain list",
         "purpose": "List domain entry summaries in deterministic order.",
         "mutating": false,
@@ -309,7 +242,7 @@
       },
       {
         "name": "show",
-        "purpose": "Return one ADR, SPEC, or domain entry with metadata and content.",
+        "purpose": "Return one ADR or domain entry with metadata and content.",
         "mutating": false,
         "has_dry_run": false,
         "safety": "read-only",
@@ -318,17 +251,15 @@
         ],
         "examples": [
           "canon show --id ADR-0001",
-          "canon show --id SPEC-0001",
           "canon show --id DM-0001"
         ],
         "next_commands": [
-          "canon append --id ADR-0001 --title Note --body ...",
-          "canon append --id SPEC-0001 --title Note --body ..."
+          "canon append --id ADR-0001 --title Note --body ..."
         ]
       },
       {
         "name": "search",
-        "purpose": "Search title, tags, status, kind, and markdown body across ADRs, SPECs, and domain entries. Reads Markdown by default; --use-index searches the cached index when it is fresh and otherwise falls back to Markdown with a warning.",
+        "purpose": "Search title, tags, status, kind, and markdown body across ADRs and domain entries. Reads Markdown by default; --use-index searches the cached index when it is fresh and otherwise falls back to Markdown with a warning.",
         "mutating": false,
         "has_dry_run": false,
         "safety": "read-only",
@@ -345,7 +276,6 @@
         ],
         "next_commands": [
           "canon show --id ADR-0001",
-          "canon show --id SPEC-0001",
           "canon index status"
         ]
       },
@@ -366,25 +296,6 @@
         ],
         "next_commands": [
           "canon show --id ADR-0001"
-        ]
-      },
-      {
-        "name": "spec search",
-        "purpose": "Search title, tags, status, and markdown body across SPECs only. --use-index searches the cached index with Markdown fallback.",
-        "mutating": false,
-        "has_dry_run": false,
-        "safety": "read-only",
-        "selectors": [
-          "--query",
-          "--status",
-          "--tag",
-          "--use-index"
-        ],
-        "examples": [
-          "canon spec search --query requirements"
-        ],
-        "next_commands": [
-          "canon show --id SPEC-0001"
         ]
       },
       {
@@ -440,7 +351,7 @@
       },
       {
         "name": "accept",
-        "purpose": "Mark an ADR, SPEC, or domain entry as accepted.",
+        "purpose": "Mark an ADR or domain entry as accepted.",
         "mutating": true,
         "has_dry_run": true,
         "safety": "write: updates one document metadata block and appends history",
@@ -449,17 +360,15 @@
           "--reason"
         ],
         "examples": [
-          "canon accept --id ADR-0001 --reason \"Approved by the team.\" --dry-run",
-          "canon accept --id SPEC-0001 --reason \"Requirements approved.\" --dry-run"
+          "canon accept --id ADR-0001 --reason \"Approved by the team.\" --dry-run"
         ],
         "next_commands": [
-          "canon show --id ADR-0001",
-          "canon show --id SPEC-0001"
+          "canon show --id ADR-0001"
         ]
       },
       {
         "name": "reject",
-        "purpose": "Mark an ADR, SPEC, or domain entry as rejected.",
+        "purpose": "Mark an ADR or domain entry as rejected.",
         "mutating": true,
         "has_dry_run": true,
         "safety": "write: updates one document metadata block and appends history",
@@ -468,17 +377,15 @@
           "--reason"
         ],
         "examples": [
-          "canon reject --id ADR-0001 --reason \"Chose a different approach.\" --dry-run",
-          "canon reject --id SPEC-0001 --reason \"Requirements changed.\" --dry-run"
+          "canon reject --id ADR-0001 --reason \"Chose a different approach.\" --dry-run"
         ],
         "next_commands": [
-          "canon show --id ADR-0001",
-          "canon show --id SPEC-0001"
+          "canon show --id ADR-0001"
         ]
       },
       {
         "name": "supersede",
-        "purpose": "Mark an ADR, SPEC, or domain entry as superseded by another document of the same kind.",
+        "purpose": "Mark an ADR or domain entry as superseded by another document of the same kind.",
         "mutating": true,
         "has_dry_run": true,
         "safety": "write: updates two document metadata blocks and appends history",
@@ -488,17 +395,15 @@
           "--reason"
         ],
         "examples": [
-          "canon supersede --id ADR-0001 --by ADR-0002 --reason \"Replaced by current architecture\" --dry-run",
-          "canon supersede --id SPEC-0001 --by SPEC-0002 --reason \"Requirements split.\" --dry-run"
+          "canon supersede --id ADR-0001 --by ADR-0002 --reason \"Replaced by current architecture\" --dry-run"
         ],
         "next_commands": [
-          "canon show --id ADR-0001",
-          "canon show --id SPEC-0001"
+          "canon show --id ADR-0001"
         ]
       },
       {
         "name": "deprecate",
-        "purpose": "Mark an ADR, SPEC, or domain entry as deprecated without a direct replacement.",
+        "purpose": "Mark an ADR or domain entry as deprecated without a direct replacement.",
         "mutating": true,
         "has_dry_run": true,
         "safety": "write: updates one document metadata block and appends history",
@@ -507,17 +412,15 @@
           "--reason"
         ],
         "examples": [
-          "canon deprecate --id ADR-0001 --reason \"No longer used\" --dry-run",
-          "canon deprecate --id SPEC-0001 --reason \"Requirements moved.\" --dry-run"
+          "canon deprecate --id ADR-0001 --reason \"No longer used\" --dry-run"
         ],
         "next_commands": [
-          "canon show --id ADR-0001",
-          "canon show --id SPEC-0001"
+          "canon show --id ADR-0001"
         ]
       },
       {
         "name": "append",
-        "purpose": "Append a dated appendix section to an ADR, SPEC, or domain entry. Disabled when .canon.jsonc sets conventions.append to false.",
+        "purpose": "Append a dated appendix section to an ADR or domain entry. Disabled when .canon.jsonc sets conventions.append to false.",
         "mutating": true,
         "has_dry_run": true,
         "safety": "write: appends markdown to one document",
@@ -527,12 +430,10 @@
           "--body"
         ],
         "examples": [
-          "canon append --id ADR-0001 --title \"2026 review\" --body \"Still valid.\"",
-          "canon append --id SPEC-0001 --title Review --body \"Requirements still apply.\""
+          "canon append --id ADR-0001 --title \"2026 review\" --body \"Still valid.\""
         ],
         "next_commands": [
-          "canon show --id ADR-0001",
-          "canon show --id SPEC-0001"
+          "canon show --id ADR-0001"
         ]
       },
       {
@@ -597,11 +498,6 @@
         "purpose": "Select ADR storage directory."
       },
       {
-        "default": "docs/spec",
-        "name": "--spec-dir",
-        "purpose": "Select SPEC storage directory."
-      },
-      {
         "default": "docs/domain",
         "name": "--domain-dir",
         "purpose": "Select domain entry storage directory."
@@ -621,7 +517,7 @@
   "next_actions": [
     {
       "command": "canon doctor",
-      "description": "Check if the ADR, SPEC, and domain directories are ready.",
+      "description": "Check if the ADR and domain directories are ready.",
       "safety": "read-only"
     }
   ]
